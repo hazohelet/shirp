@@ -18,7 +18,7 @@ typedef enum {
   TOKEN_FLOAT,
   TOKEN_STRING,
   TOKEN_RESERVED,
-  TOKEN_PUNCTUATOR,
+  TOKEN_DELIMITER,
 } TokenKind;
 
 typedef struct Token Token;
@@ -34,7 +34,7 @@ struct Token {
   } val; // hold value for numbers
 };
 
-void tokenize(char *input);
+Token *tokenize(char *input, Token *last_token);
 void dump_tokens(Token *tokens);
 
 typedef enum {

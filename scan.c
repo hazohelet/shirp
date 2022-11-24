@@ -1,6 +1,8 @@
 #include "shirp.h"
 
 Token *cur;
+int brackets_left = 0;
+bool lexical_error = false;
 
 static Token *new_token(TokenKind kind, char *start, char *end) {
   Token *token = (Token *)shirp_malloc(sizeof(Token));
@@ -12,20 +14,6 @@ static Token *new_token(TokenKind kind, char *start, char *end) {
   return token;
 }
 
-static bool startswith(char *str, char *prefix) {
-  return strncmp(str, prefix, strlen(prefix)) == 0;
-}
-
-static size_t read_punct(char *p) {
-  char *puncts[] = {"(", ")", "'"};
-  for (unsigned int i = 0; i < sizeof(puncts) / sizeof(puncts[0]); i++) {
-    if (startswith(p, puncts[i])) {
-      return strlen(puncts[i]);
-    }
-  }
-  return 0;
-}
-
 static bool included(char c, char *str) {
   for (unsigned int i = 0; i < strlen(str); i++) {
     if (c == str[i]) {
@@ -33,6 +21,10 @@ static bool included(char c, char *str) {
     }
   }
   return false;
+}
+
+static bool is_delimiter(char c) {
+  return isspace(c) || c == '\0' || included(c, "\n|()\";");
 }
 
 static bool is_ident_valid(char c) {
@@ -60,17 +52,50 @@ static size_t read_ident(char *p, int *kind) {
   return len;
 }
 
-void tokenize(char *input) {
-  Token head = {};
-  Token *last_tok = &head;
+/*
+  input(char *): the head of the input string
+  last_tok(Token *): the last toekn that has been scanned
+*/
+Token *tokenize(char *input, Token *last_tok) {
   char *c = input;
   while (*c) {
-    if (isspace(*c))
+    if (isspace(*c) || *c == '\n' || *c == '\r')
       c++;
-    size_t punct_len = read_punct(c);
-    if (punct_len > 0) {
-      last_tok = last_tok->next = new_token(TOKEN_PUNCTUATOR, c, c + punct_len);
-      c += punct_len;
+    if (*c == ';') {
+      while (*c != '\n' && *c != '\0')
+        c++;
+      continue;
+    }
+
+    if (is_delimiter(*c)) {
+      if (*c == '(') {
+        brackets_left++;
+        last_tok = last_tok->next = new_token(TOKEN_DELIMITER, c, c + 1);
+        c++;
+        continue;
+      } else if (*c == ')') {
+        if (brackets_left <= 0) {
+          fprintf(stderr, "error: unexpected ')'\n");
+          lexical_error = true;
+          return last_tok;
+        }
+        brackets_left--;
+        last_tok = last_tok->next = new_token(TOKEN_DELIMITER, c, c + 1);
+        c++;
+        continue;
+      } else if (*c == '|') {
+        char *start = ++c;
+        while (*c != '|') {
+          if (*c == '\0') {
+            fprintf(stderr, "unclosed delimiter\n");
+            lexical_error = true;
+            // error_at(start, "unclosed delimiter");
+          }
+          c++;
+        }
+        last_tok = last_tok->next = new_token(TOKEN_DELIMITER, start, c++);
+        continue;
+      }
       continue;
     }
 
@@ -94,7 +119,8 @@ void tokenize(char *input) {
       continue;
     }
     fprintf(stderr, "Error: invalid character: %c\n", *c);
-    exit(EXIT_FAILURE);
+    lexical_error = true;
+    break;
   }
-  cur = head.next;
+  return last_tok;
 }
