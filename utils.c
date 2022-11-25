@@ -9,6 +9,9 @@ void *shirp_malloc(size_t size) {
   return ptr;
 }
 
+/*
+  Tokenizer Utility Functions
+*/
 void dump_tokens(Token *tokens) {
   if (!tokens) {
     printf("NULL\n");

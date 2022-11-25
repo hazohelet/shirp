@@ -1,8 +1,26 @@
 #include "shirp.h"
 
+// offset given by `>> ` repl prompt
+#define PROMPT_OFFSET 3
+
 Token *cur;
 int brackets_left = 0;
 bool lexical_error = false;
+
+// reports error with its position
+static void verror_at(char *input, char *loc, char *fmt, va_list ap) {
+  int offset = (int)(loc - input) + PROMPT_OFFSET;
+  fprintf(stderr, "%*s^ ", offset, "");
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+}
+
+static void error_at(char *input, char *loc, char *fmt, ...) {
+  lexical_error = true;
+  va_list ap;
+  va_start(ap, fmt);
+  verror_at(input, loc, fmt, ap);
+}
 
 static Token *new_token(TokenKind kind, char *start, char *end) {
   Token *token = (Token *)shirp_malloc(sizeof(Token));
@@ -75,8 +93,7 @@ Token *tokenize(char *input, Token *last_tok) {
         continue;
       } else if (*c == ')') {
         if (brackets_left <= 0) {
-          fprintf(stderr, "error: unexpected ')'\n");
-          lexical_error = true;
+          error_at(input, c, "unexpected ')'");
           return last_tok;
         }
         brackets_left--;
@@ -87,8 +104,8 @@ Token *tokenize(char *input, Token *last_tok) {
         char *start = ++c;
         while (*c != '|') {
           if (*c == '\0') {
-            fprintf(stderr, "unclosed delimiter\n");
-            lexical_error = true;
+            error_at(input, start - 1, "unterminated '|'");
+            return last_tok;
             // error_at(start, "unclosed delimiter");
           }
           c++;
@@ -118,8 +135,7 @@ Token *tokenize(char *input, Token *last_tok) {
       }
       continue;
     }
-    fprintf(stderr, "Error: invalid character: %c\n", *c);
-    lexical_error = true;
+    error_at(input, c, "invalid character: %c", *c);
     break;
   }
   return last_tok;

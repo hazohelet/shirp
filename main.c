@@ -43,6 +43,7 @@ int main() {
     char *line = (char *)shirp_malloc(bufsize * sizeof(char));
     line = shirp_readline(line, &pos, &bufsize);
 
+    brackets_left = 0;
     lexical_error = false;
     Token head = {};
     Token *tail = tokenize(line, &head);
@@ -50,11 +51,15 @@ int main() {
       free(line);
       continue;
     }
-    while (brackets_left > 0) {
-      fprintf(stderr, "... ");
+    while (brackets_left > 0 && !lexical_error) {
+      fprintf(stderr, ".. ");
       size_t tmp_pos = pos;
       line = shirp_readline(line, &pos, &bufsize);
       tail = tokenize(line + tmp_pos, tail);
+    }
+    if (lexical_error) {
+      free(line);
+      continue;
     }
     dump_tokens(head.next);
 
