@@ -10,12 +10,13 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
   char c;
 
   while (1) {
-    c = (char)getchar();
+    int raw_c = getchar();
+    c = (char)raw_c;
 
     if (c == '\n') {
       buffer[*pos] = '\0';
       return buffer;
-    } else if (c == EOF) {
+    } else if (raw_c == EOF) {
       printf("\n");
       exit(-1);
     } else {
