@@ -7,11 +7,10 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 typedef enum {
   TOKEN_IDENT,
@@ -95,12 +94,39 @@ void free_ast(ASTNode *node);
 void free_tokens(Token *tok);
 void evaluate_ast(ASTNode *ast, bool make_childprocess);
 
+/* Environment related */
+typedef struct {
+  char *key;
+  size_t keylen;
+  void *val;
+} Entry;
+
+typedef struct {
+  size_t used;
+  size_t capacity;
+  Entry **buckets;
+} HashTable;
+
+typedef struct Frame Frame;
+struct Frame {
+  Frame *outer;
+  HashTable *table;
+  bool is_held;
+};
+
+Frame *push_new_frame(Frame *outer);
+Frame *pop_frame(Frame *frame);
+void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val);
+void *get_obj(Frame *frame, char *key, size_t keylen);
+
 /* Evaluation Trees */
 Obj *eval_ast(ASTNode *node);
 void print_obj(Obj *obj);
 
 /* util.c: Utility functions especially for debugging*/
 void *shirp_malloc(size_t size);
+void *shirp_calloc(size_t n, size_t size);
+void *shirp_realloc(void *ptr, size_t size);
 void verror_at(char *loc, char *fmt, va_list ap);
 void debug_log(char *fmt, ...);
 

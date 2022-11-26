@@ -12,6 +12,24 @@ void *shirp_malloc(size_t size) {
   return ptr;
 }
 
+void *shirp_calloc(size_t n, size_t size) {
+  void *ptr = calloc(n, size);
+  if (!ptr) {
+    fprintf(stderr, "shirp: allocation error");
+    exit(EXIT_FAILURE);
+  }
+  return ptr;
+}
+
+void *shirp_realloc(void *ptr, size_t size) {
+  void *new_ptr = realloc(ptr, size);
+  if (!new_ptr) {
+    fprintf(stderr, "shirp: allocation error");
+    exit(EXIT_FAILURE);
+  }
+  return new_ptr;
+}
+
 // reports error with its position
 void verror_at(char *loc, char *fmt, va_list ap) {
   int offset = PROMPT_OFFSET;

@@ -1,6 +1,7 @@
 cc_binary(
     name = "shirp",
     srcs = [
+        "environment.c",
         "main.c",
         "object.c",
         "parser.c",
@@ -19,6 +20,7 @@ cc_binary(
 cc_binary(
     name = "shirp_debug",
     srcs = [
+        "environment.c",
         "main.c",
         "object.c",
         "parser.c",
