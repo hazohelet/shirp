@@ -41,23 +41,31 @@ static bool included(char c, char *str) {
   return false;
 }
 
+/* check whether the char is a delimiter or not */
 static bool is_delimiter(char c) {
   return isspace(c) || c == '\0' || included(c, "\n|()\";");
 }
 
+/* check whether the char is valid as an identifier character */
 static bool is_ident_valid(char c) {
   return isdigit(c) || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
          included(c, "!$%&*+-./:<=>?@^_~");
 }
 
-static size_t read_ident(char *p, int *kind) {
+static bool is_sign(char c) { return included(c, "+-"); }
+
+static size_t read_token(char *p, int *kind) {
   /*
-  kind: 0(ident), 1(integer), 2(floating)
+  kind: 0(ident), 1(integer), 2(floating),
   */
   *kind = 1;
   size_t len = 0;
+  if (is_sign(*p) && (isdigit(*(p + 1)) || *(p + 1) == '.')) {
+    len++;
+    p++;
+  }
   while (is_ident_valid(*p)) {
-    if (*kind == 1 && *p == '.') {
+    if (*kind == 1 && *p == '.' && (isdigit(*(p + 1)) || isdigit(*(p - 1)))) {
       *kind = 2;
     } else if (*kind == 2 && *p == '.') {
       *kind = 0;
@@ -106,7 +114,6 @@ Token *tokenize(char *input, Token *last_tok) {
           if (*c == '\0') {
             error_at(input, start - 1, "unterminated '|'");
             return last_tok;
-            // error_at(start, "unclosed delimiter");
           }
           c++;
         }
@@ -117,7 +124,7 @@ Token *tokenize(char *input, Token *last_tok) {
     }
 
     int tok_kind;
-    size_t ident_len = read_ident(c, &tok_kind);
+    size_t ident_len = read_token(c, &tok_kind);
     if (ident_len > 0) {
       switch (tok_kind) {
       case 0:
@@ -125,12 +132,14 @@ Token *tokenize(char *input, Token *last_tok) {
         c += ident_len;
         break;
       case 1:
-        last_tok = last_tok->next = new_token(TOKEN_INTEGER, c, c + ident_len);
-        last_tok->val.int_val = strtol(c, &c, 10);
+        last_tok = last_tok->next = new_token(TOKEN_NUMBER, c, c + ident_len);
+        last_tok->obj = new_obj(INT_TY);
+        last_tok->obj->num_val.int_val = strtol(c, &c, 10);
         break;
       case 2:
-        last_tok = last_tok->next = new_token(TOKEN_FLOAT, c, c + ident_len);
-        last_tok->val.float_val = (double)strtold(c, &c);
+        last_tok = last_tok->next = new_token(TOKEN_NUMBER, c, c + ident_len);
+        last_tok->obj = new_obj(FLOAT_TY);
+        last_tok->obj->num_val.float_val = (double)strtold(c, &c);
         break;
       }
       continue;

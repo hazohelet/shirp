@@ -15,28 +15,55 @@
 
 typedef enum {
   TOKEN_IDENT,
-  TOKEN_INTEGER,
-  TOKEN_FLOAT,
+  TOKEN_NUMBER,
   TOKEN_STRING,
   TOKEN_RESERVED,
   TOKEN_DELIMITER,
+  TOKEN_PERIOD,
 } TokenKind;
 
 typedef struct Token Token;
+typedef struct Obj Obj;
 
 struct Token {
-  TokenKind kind;
+  TokenKind kind; // token kind
   char *loc;
   size_t len;
   Token *next;
-  union {
-    int64_t int_val;
-    double float_val;
-  } val; // hold value for numbers
+  Obj *obj; // value of the number tokens
 };
 
 Token *tokenize(char *input, Token *last_token);
+bool match(char *str, char *keyword, size_t len);
 void dump_tokens(Token *tokens);
+
+typedef enum {
+  INT_TY,
+  FLOAT_TY,
+  CHAR_TY,
+  STRING_TY,
+  LAMBDA_TY,
+  LIST_TY,
+  QUOTE_TY
+} ObjType;
+
+struct Obj {
+  ObjType typ; // value type of object
+  /* Number Value */
+  union {
+    int64_t int_val;
+    double float_val;
+  } num_val;
+  /* String Value */
+  char *str_val;
+  /* Lambda attributes */
+  char **params;
+  Obj *body;
+  /* List attributes */
+  Obj *car;
+  Obj *cdr;
+};
+Obj *new_obj(ObjType typ);
 
 typedef enum {
   NODE_PIPE,
