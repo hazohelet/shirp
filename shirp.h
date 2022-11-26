@@ -19,6 +19,7 @@ typedef enum {
   TOKEN_STRING,
   TOKEN_RESERVED,
   TOKEN_DELIMITER,
+  TOKEN_KEYWORD,
   TOKEN_PERIOD,
 } TokenKind;
 
@@ -34,7 +35,8 @@ struct Token {
 };
 
 Token *tokenize(char *input, Token *last_token);
-bool match(char *str, char *keyword, size_t len);
+bool match_str(char *str, char *keyword, size_t len);
+bool match_tok(Token *tok, char *keyword);
 void dump_tokens(Token *tokens);
 
 typedef enum {
@@ -66,19 +68,19 @@ struct Obj {
 Obj *new_obj(ObjType typ);
 
 typedef enum {
-  NODE_PIPE,
-  NODE_OUTPUT_REDIRECT,
-  NODE_INPUT_REDIRECT,
-  NODE_EXECUNIT,
-  NODE_SEQUENCE,
-  NODE_BACKGROUND_EXEC
-} ASTNodeKind;
+  ND_IDENT,
+  ND_NUMBER,
+  ND_LAMBDA,
+  ND_DEFINE,
+  ND_PROCCALL,
+} NodeKind;
 
 typedef struct ASTNode ASTNode;
 struct ASTNode {
-  ASTNodeKind kind;   // indicate what operation needs to be performed
-  ASTNode *lhs, *rhs; // for binary and unary operations
-  Token *tok;         // representative token
+  NodeKind kind;
+  Token *tok;    // representative token
+  ASTNode *args; // procedure calls hold arguments
+  ASTNode *next; // if this is an argument, next is needed
 };
 
 ASTNode *expr();
@@ -88,15 +90,13 @@ void free_ast(ASTNode *node);
 void free_tokens(Token *tok);
 void evaluate_ast(ASTNode *ast, bool make_childprocess);
 
-int bsh_cd(char **);
-int bsh_help(char **);
-int bsh_exit(char **);
-int bsh_bg(char **);
-int bsh_fg(char **);
-int bsh_jobs(char **);
-int launch_builtin_command_if_possible(char **argv);
+/* Evaluation Trees */
+Obj *eval_ast(ASTNode *node);
+void print_obj(Obj *obj);
 
 /* util.c: Utility functions especially for debugging*/
 void *shirp_malloc(size_t size);
+void verror_at(char *loc, char *fmt, va_list ap);
+void debug_log(char *fmt, ...);
 
 #endif

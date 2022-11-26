@@ -1,25 +1,13 @@
 #include "shirp.h"
 
-// offset given by `>> ` repl prompt
-#define PROMPT_OFFSET 3
-
-Token *cur;
 int brackets_left = 0;
 bool lexical_error = false;
 
-// reports error with its position
-static void verror_at(char *input, char *loc, char *fmt, va_list ap) {
-  int offset = (int)(loc - input) + PROMPT_OFFSET;
-  fprintf(stderr, "%*s^ ", offset, "");
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
-}
-
-static void error_at(char *input, char *loc, char *fmt, ...) {
+static void error_at(char *loc, char *fmt, ...) {
   lexical_error = true;
   va_list ap;
   va_start(ap, fmt);
-  verror_at(input, loc, fmt, ap);
+  verror_at(loc, fmt, ap);
 }
 
 static Token *new_token(TokenKind kind, char *start, char *end) {
@@ -78,6 +66,26 @@ static size_t read_token(char *p, int *kind) {
   return len;
 }
 
+/* whether the identifier is recognized as keyword */
+bool is_keyword(Token *token) {
+  if (token->kind != TOKEN_IDENT) {
+    return false;
+  }
+  static char *keywords[] = {
+      "if",          "cond",    "case",        "else",         "and",
+      "or",          "when",    "unless",      "let",          "let*",
+      "letrec",      "letrec*", "let-values",  "let*-values",  "begin",
+      "do",          "delay",   "delay-force", "parameterize", "guard",
+      "case-lambda", "lambda"};
+  for (size_t i = 0; i < sizeof(keywords) / sizeof(*keywords); i++) {
+    if (token->len == strlen(keywords[i]) &&
+        !strncmp(token->loc, keywords[i], token->len)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /*
   input(char *): the head of the input string
   last_tok(Token *): the last toekn that has been scanned
@@ -101,7 +109,7 @@ Token *tokenize(char *input, Token *last_tok) {
         continue;
       } else if (*c == ')') {
         if (brackets_left <= 0) {
-          error_at(input, c, "unexpected ')'");
+          error_at(c, "unexpected ')'");
           return last_tok;
         }
         brackets_left--;
@@ -112,7 +120,7 @@ Token *tokenize(char *input, Token *last_tok) {
         char *start = ++c;
         while (*c != '|') {
           if (*c == '\0') {
-            error_at(input, start - 1, "unterminated '|'");
+            error_at(start - 1, "unterminated '|'");
             return last_tok;
           }
           c++;
@@ -142,9 +150,12 @@ Token *tokenize(char *input, Token *last_tok) {
         last_tok->obj->num_val.float_val = (double)strtold(c, &c);
         break;
       }
+      if (is_keyword(last_tok)) {
+        last_tok->kind = TOKEN_KEYWORD;
+      }
       continue;
     }
-    error_at(input, c, "invalid character: %c", *c);
+    error_at(c, "invalid character: %c", *c);
     break;
   }
   return last_tok;

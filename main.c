@@ -62,7 +62,13 @@ int main() {
       free(line);
       continue;
     }
-    dump_tokens(head.next);
+    /* tokenization finished */
+    cur = head.next;
+    // dump_tokens(cur);
+    ASTNode *ast = expr();
+    Obj *res = eval_ast(ast);
+    if (res)
+      print_obj(res);
 
     free(line);
   } while (1);
