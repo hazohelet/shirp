@@ -3,6 +3,9 @@
 int brackets_left = 0;
 bool lexical_error = false;
 
+extern Obj *true_obj;
+extern Obj *false_obj;
+
 static void error_at(char *loc, char *fmt, ...) {
   lexical_error = true;
   va_list ap;
@@ -86,6 +89,23 @@ bool is_keyword(Token *token) {
   return false;
 }
 
+Token *handle_sharp(char *c, char **cref) {
+  char *head = c;
+  while (*c && is_ident_valid(*c)) {
+    c++;
+  }
+  size_t len = (size_t)(c - head);
+  /* TODO: impl other sharp features */
+  Token *tok = new_token(TOKEN_NUMBER, head, c);
+  if (match_str(*cref, "t", len) || match_str(*cref, "true", len))
+    tok->obj = true_obj;
+  else if (match_str(*cref, "f", len) || match_str(*cref, "false", len))
+    tok->obj = false_obj;
+
+  *cref += len;
+  return tok;
+}
+
 /*
   input(char *): the head of the input string
   last_tok(Token *): the last toekn that has been scanned
@@ -98,6 +118,11 @@ Token *tokenize(char *input, Token *last_tok) {
     if (*c == ';') {
       while (*c != '\n' && *c != '\0')
         c++;
+      continue;
+    }
+
+    if (*c == '#') {
+      last_tok = last_tok->next = handle_sharp(++c, &c);
       continue;
     }
 

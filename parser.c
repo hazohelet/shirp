@@ -41,6 +41,11 @@ static bool consume_rbr() {
   return false;
 }
 
+void expect_rbr() {
+  if (!consume_rbr())
+    error_at(cur, "expected '('");
+}
+
 static bool consume(TokenKind kind) {
   if (cur->kind == kind) {
     read_next();
@@ -57,10 +62,12 @@ ASTNode *expr() {
     debug_log("Number read");
     return new_ast_node(ND_NUMBER, prev);
   } else if (consume_lbr()) {
-    if (cur->kind == TOKEN_IDENT) {
+    if (cur->kind != TOKEN_KEYWORD) {
       debug_log("Proc Call!");
       ASTNode *node = new_ast_node(ND_PROCCALL, cur);
-      read_next();
+      node->caller = expr();
+      if (!node->caller)
+        return NULL;
       ASTNode *args = NULL;
       ASTNode *last_arg = args;
       while (cur && !match_tok(cur, ")")) {
@@ -74,6 +81,21 @@ ASTNode *expr() {
       if (consume_rbr()) {
         return node;
       }
+    } else if (match_tok(cur, "if")) {
+      debug_log("If statement!");
+      ASTNode *node = new_ast_node(ND_IF, cur);
+      read_next();
+      ASTNode *test = expr();
+      ASTNode *consequent = expr();
+      ASTNode *alternate = NULL;
+      if (!match_tok(cur, ")")) {
+        alternate = expr();
+      }
+      expect_rbr();
+      node->args = test;
+      test->next = consequent;
+      consequent->next = alternate;
+      return node;
     }
   }
   error_at(cur, "unexpected token");

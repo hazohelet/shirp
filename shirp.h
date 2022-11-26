@@ -40,6 +40,8 @@ bool match_tok(Token *tok, char *keyword);
 void dump_tokens(Token *tokens);
 
 typedef enum {
+  UNDEF_TY,
+  BOOL_TY,
   INT_TY,
   FLOAT_TY,
   CHAR_TY,
@@ -53,6 +55,7 @@ struct Obj {
   ObjType typ; // value type of object
   /* Number Value */
   union {
+    bool bool_val;
     int64_t int_val;
     double float_val;
   } num_val;
@@ -70,6 +73,7 @@ Obj *new_obj(ObjType typ);
 typedef enum {
   ND_IDENT,
   ND_NUMBER,
+  ND_IF,
   ND_LAMBDA,
   ND_DEFINE,
   ND_PROCCALL,
@@ -78,9 +82,10 @@ typedef enum {
 typedef struct ASTNode ASTNode;
 struct ASTNode {
   NodeKind kind;
-  Token *tok;    // representative token
-  ASTNode *args; // procedure calls hold arguments
-  ASTNode *next; // if this is an argument, next is needed
+  Token *tok;      // representative token
+  ASTNode *caller; // procedure calls caller expression
+  ASTNode *args;   // procedure calls hold arguments
+  ASTNode *next;   // if this is an argument, next is needed
 };
 
 ASTNode *expr();

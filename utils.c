@@ -50,6 +50,9 @@ bool match_tok(Token *tok, char *keyword) {
 }
 
 void dump_tokens(Token *tokens) {
+#ifndef DEBUG
+  return;
+#endif
   if (!tokens) {
     printf("NULL\n");
     return;

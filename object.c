@@ -1,12 +1,22 @@
 #include "shirp.h"
 
 void print_obj(Obj *obj) {
-  if (obj->typ == INT_TY)
+  switch (obj->typ) {
+  case UNDEF_TY:
+    fprintf(stderr, "#<undef>\n");
+    break;
+  case BOOL_TY:
+    fprintf(stderr, "%s\n", obj->num_val.bool_val ? "#t" : "#f");
+    break;
+  case INT_TY:
     fprintf(stderr, "%ld\n", obj->num_val.int_val);
-  else if (obj->typ == FLOAT_TY)
+    break;
+  case FLOAT_TY:
     fprintf(stderr, "%lf\n", obj->num_val.float_val);
-  else
+    break;
+  default:
     fprintf(stderr, "Eval Error");
+  }
 }
 
 Obj *new_obj(ObjType typ) {
@@ -14,6 +24,17 @@ Obj *new_obj(ObjType typ) {
   obj->typ = typ;
   return obj;
 }
+
+/*
+static Obj *create_bool_obj(bool val) {
+  Obj *obj = new_obj(BOOL_TY);
+  obj->num_val.bool_val = val;
+  return obj;
+}
+*/
+
+Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, NULL, NULL, NULL, NULL};
+Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, NULL, NULL, NULL, NULL};
 
 Obj *new_int_obj(int64_t val) {
   Obj *obj = new_obj(INT_TY);
@@ -81,13 +102,33 @@ Obj *handle_proc_call(ASTNode *node) {
   return NULL;
 }
 
+static bool is_not_false(Obj *obj) {
+  return !(obj->typ == BOOL_TY && obj->num_val.bool_val == false);
+}
+
+Obj *eval_if(ASTNode *node) {
+  ASTNode *test = node->args;
+  Obj *test_val = eval_ast(test);
+  ASTNode *consequent = test->next;
+  ASTNode *alternate = consequent->next;
+
+  if (is_not_false(test_val))
+    return eval_ast(consequent);
+  return eval_ast(alternate);
+}
+
 Obj *eval_ast(ASTNode *node) {
+  if (!node) {
+    return new_obj(UNDEF_TY);
+  }
   switch (node->kind) {
   case ND_IDENT:
     debug_log("To be implemented");
     break;
   case ND_NUMBER:
     return node->tok->obj;
+  case ND_IF:
+    return eval_if(node);
   case ND_PROCCALL:
     return handle_proc_call(node);
   case ND_LAMBDA:

@@ -4,6 +4,7 @@
 
 extern Token *cur;
 extern bool lexical_error;
+extern bool syntax_error;
 extern int brackets_left;
 
 char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
@@ -46,6 +47,7 @@ int main() {
 
     brackets_left = 0;
     lexical_error = false;
+    syntax_error = false;
     Token head = {};
     Token *tail = tokenize(line, &head);
     if (lexical_error) {
@@ -58,14 +60,18 @@ int main() {
       line = shirp_readline(line, &pos, &bufsize);
       tail = tokenize(line + tmp_pos, tail);
     }
-    if (lexical_error) {
+    if (!head.next || lexical_error) {
       free(line);
       continue;
     }
     /* tokenization finished */
     cur = head.next;
-    // dump_tokens(cur);
+    dump_tokens(cur);
     ASTNode *ast = expr();
+    if (syntax_error) {
+      free(line);
+      continue;
+    }
     Obj *res = eval_ast(ast);
     if (res)
       print_obj(res);
