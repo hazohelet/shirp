@@ -119,7 +119,7 @@ Frame *pop_frame(Frame *frame) {
 
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val) {
   hashtable_insert(frame->table, key, keylen, val);
-  debug_log("`%.*s` registerred to %p", keylen, key, frame);
+  debug_log("`%.*s` registerred to frame %p", keylen, key, frame);
 }
 
 void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
@@ -128,7 +128,7 @@ void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
     Entry *entry = hashtable_get(frame->table, key, keylen);
     if (entry) {
       debug_printf("Key found! %.*s: ", keylen, key);
-#ifndef DEBUG
+#ifdef DEBUG
       print_obj(entry->val);
 #endif
       return entry->val;

@@ -126,8 +126,8 @@ size_t get_argc(ASTNode *args) {
 }
 
 /* repr_tok is for printing error info */
-Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
-  debug_log("trying proc call `%.*s` eval...", repr_tok->len, repr_tok->loc);
+Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
+  debug_log("calling user procedure: `%.*s`", repr_tok->len, repr_tok->loc);
   if (proc->typ != LAMBDA_TY) {
     tok_error_at(repr_tok, "not a procedure");
     eval_error = true;
@@ -142,20 +142,15 @@ Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
     return NULL;
   }
 
-  Frame *saved_global_env = env;       // save for the function epilogue
-  Frame *exec_env = proc->saved_env;   // retrieve the saved env
-  exec_env->outer = env;               // set the outer env
-                                       // set the outer env
-  exec_env = push_new_frame(exec_env); // new frame for the execution
-                                       // environment: shall be popped later
-  frame_insert_obj(exec_env, repr_tok->loc, repr_tok->len,
-                   proc); // for recursive calls
-  env = exec_env;         // exec in this env
+  Frame *exec_env =
+      copied_environment(proc->saved_env); // retrieve the saved env
+  exec_env->outer = env;                   // set the outer env
+                                           // set the outer env
 
   ASTNode *proc_arg = proc->lambda_ast->args;
   /* set up arguments to new frame */
   while (proc_arg) {
-    frame_insert_obj(env, proc_arg->tok->loc, proc_arg->tok->len,
+    frame_insert_obj(exec_env, proc_arg->tok->loc, proc_arg->tok->len,
                      eval_ast(args));
     if (eval_error) {
       return NULL;
@@ -163,7 +158,7 @@ Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
     proc_arg = proc_arg->next;
     args = args->next;
   }
-  dump_env(env);
+  env = exec_env; // exec in this env
 
   Obj *res = NULL;
   ASTNode *body = proc->lambda_ast->caller;
@@ -171,8 +166,7 @@ Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
     res = eval_ast(body);
     body = body->next;
   }
-  exec_env = pop_frame(exec_env); // pop the execution environment
-  env = saved_global_env;         // getting env to as it was
+  env = pop_frame(exec_env); // pop the execution environment
   return res;
 }
 
@@ -223,7 +217,7 @@ Obj *handle_proc_call(ASTNode *node) {
   Obj *caller = eval_ast(node->caller);
   if (!caller)
     return NULL;
-  return try_proc_call(node->tok, caller, node->args);
+  return call_user_procedure(node->tok, caller, node->args);
 }
 
 static bool is_not_false(Obj *obj) {
@@ -263,8 +257,9 @@ Obj *eval_ast(ASTNode *node) {
   }
   switch (node->kind) {
   case ND_IDENT:
-    debug_log("handle identifier in eval, env: %p, outer: %p", env, env->outer);
-    debug_log("key: %.*s", node->tok->len, node->tok->loc);
+    debug_log("handle identifier `%.*s` in the following environment",
+              node->tok->len, node->tok->loc);
+    dump_env(env);
     Obj *obj = frame_get_obj(env, node->tok->loc, node->tok->len);
     if (obj)
       return obj;

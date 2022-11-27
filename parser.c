@@ -95,11 +95,11 @@ ASTNode *expression() {
     debug_log("Identifier parsed: %.*s", prev->len, prev->loc);
     return new_ast_node(ND_IDENT, prev);
   } else if (consume(TOKEN_NUMBER)) {
-    debug_log("Number parsed");
+    debug_log("Number parsed: %.*s", prev->len, prev->loc);
     return new_ast_node(ND_NUMBER, prev);
   } else if (consume_lbr()) {
     if (cur->kind != TOKEN_KEYWORD) {
-      debug_log("Proc Call parsed!");
+      debug_log("Proc Call parsed!: %.*s", cur->len, cur->loc);
       ASTNode *node = new_ast_node(ND_PROCCALL, cur);
       node->caller = expression();
       if (!node->caller)

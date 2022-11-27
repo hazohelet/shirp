@@ -114,15 +114,14 @@ void dump_hashtable(HashTable *ht) {
 #ifndef DEBUG
   return;
 #endif
-  fprintf(stderr, "---HashTable---\n");
   for (size_t i = 0; i < ht->capacity; i++) {
     Entry *entry = ht->buckets[i];
     if (entry && entry != TOMBSTONE) {
-      fprintf(stderr, "`%.*s` registered as ", (int)entry->keylen, entry->key);
+      fprintf(stderr, "`%.*s`: ", (int)entry->keylen, entry->key);
       print_obj(entry->val);
     }
   }
-  fprintf(stderr, "---HashTable--END---\n");
+  fprintf(stderr, "--hash-----------\n");
 }
 
 void dump_env(Frame *env) {
@@ -134,5 +133,4 @@ void dump_env(Frame *env) {
     dump_hashtable(env->table);
     env = env->outer;
   }
-  fprintf(stderr, "---FINISHENV---\n");
 }

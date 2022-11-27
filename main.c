@@ -78,6 +78,7 @@ int main() {
       free(line);
       continue;
     }
+    debug_log("/* Parsing finished */\n");
     Obj *res = eval_ast(ast);
     // dump_hashtable(env->table);
     if (eval_error) {
