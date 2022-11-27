@@ -121,7 +121,7 @@ void dump_hashtable(HashTable *ht) {
       print_obj(entry->val);
     }
   }
-  fprintf(stderr, "--hash-----------\n");
+  fprintf(stderr, "-----------------\n");
 }
 
 void dump_env(Frame *env) {

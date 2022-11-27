@@ -116,6 +116,7 @@ struct Frame {
   bool is_held;
 };
 
+Frame *push_frame(Frame *frame, Frame *outer);
 Frame *push_new_frame(Frame *outer);
 Frame *pop_frame(Frame *frame);
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val);

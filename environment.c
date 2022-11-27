@@ -110,6 +110,11 @@ Frame *push_new_frame(Frame *outer) {
   return frame;
 }
 
+Frame *push_frame(Frame *frame, Frame *outer) {
+  frame->outer = outer;
+  return frame;
+}
+
 Frame *pop_frame(Frame *frame) {
   Frame *outer = frame->outer;
   free_table(frame->table);

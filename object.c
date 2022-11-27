@@ -142,15 +142,16 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
     return NULL;
   }
 
+  /* copied because the pointer of the saved environment needs to point other
+   * frames, especially in recursive calls */
   Frame *exec_env =
-      copied_environment(proc->saved_env); // retrieve the saved env
-  exec_env->outer = env;                   // set the outer env
-                                           // set the outer env
+      copied_environment(proc->saved_env); // retrieve the saved environment
+  env = push_frame(exec_env, env);         // push frame on the stack
 
   ASTNode *proc_arg = proc->lambda_ast->args;
   /* set up arguments to new frame */
   while (proc_arg) {
-    frame_insert_obj(exec_env, proc_arg->tok->loc, proc_arg->tok->len,
+    frame_insert_obj(env, proc_arg->tok->loc, proc_arg->tok->len,
                      eval_ast(args));
     if (eval_error) {
       return NULL;
@@ -158,7 +159,6 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
     proc_arg = proc_arg->next;
     args = args->next;
   }
-  env = exec_env; // exec in this env
 
   Obj *res = NULL;
   ASTNode *body = proc->lambda_ast->caller;
@@ -166,7 +166,7 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
     res = eval_ast(body);
     body = body->next;
   }
-  env = pop_frame(exec_env); // pop the execution environment
+  env = pop_frame(env); // pop the execution environment
   return res;
 }
 
