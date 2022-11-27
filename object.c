@@ -104,6 +104,31 @@ void Obj_mul_operation(Obj *dst, Obj *op1, Obj *op2) {
   }
 }
 
+void Obj_div_operation(Obj *dst, Obj *op1, Obj *op2) {
+  if (op1->typ == INT_TY && op2->typ == INT_TY) {
+    dst->typ = INT_TY;
+    dst->num_val.int_val = op1->num_val.int_val / op2->num_val.int_val;
+  } else {
+    dst->typ = FLOAT_TY;
+    convert_to_float(op1);
+    convert_to_float(op2);
+    dst->num_val.float_val = op1->num_val.float_val / op2->num_val.float_val;
+  }
+}
+
+void Obj_mod_operation(Obj *dst, Obj *op1, Obj *op2) {
+  if (op1->typ == INT_TY && op2->typ == INT_TY) {
+    dst->typ = INT_TY;
+    dst->num_val.int_val = op1->num_val.int_val % op2->num_val.int_val;
+  } else {
+    dst->typ = FLOAT_TY;
+    convert_to_float(op1);
+    convert_to_float(op2);
+    dst->num_val.float_val =
+        fmod(op1->num_val.float_val, op2->num_val.float_val);
+  }
+}
+
 void Obj_lt_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = BOOL_TY;
@@ -113,6 +138,18 @@ void Obj_lt_operation(Obj *dst, Obj *op1, Obj *op2) {
     convert_to_float(op2);
     dst->typ = BOOL_TY;
     dst->num_val.bool_val = op1->num_val.float_val < op2->num_val.float_val;
+  }
+}
+
+void Obj_eq_operation(Obj *dst, Obj *op1, Obj *op2) {
+  if (op1->typ == INT_TY && op2->typ == INT_TY) {
+    dst->typ = BOOL_TY;
+    dst->num_val.bool_val = op1->num_val.int_val == op2->num_val.int_val;
+  } else {
+    convert_to_float(op1);
+    convert_to_float(op2);
+    dst->typ = BOOL_TY;
+    dst->num_val.bool_val = op1->num_val.float_val == op2->num_val.float_val;
   }
 }
 
@@ -146,12 +183,12 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
    * frames, especially in recursive calls */
   Frame *exec_env =
       copied_environment(proc->saved_env); // retrieve the saved environment
-  env = push_frame(exec_env, env);         // push frame on the stack
+  exec_env = push_frame(exec_env, env);    // push frame on the stack
 
   ASTNode *proc_arg = proc->lambda_ast->args;
   /* set up arguments to new frame */
   while (proc_arg) {
-    frame_insert_obj(env, proc_arg->tok->loc, proc_arg->tok->len,
+    frame_insert_obj(exec_env, proc_arg->tok->loc, proc_arg->tok->len,
                      eval_ast(args));
     if (eval_error) {
       return NULL;
@@ -159,6 +196,9 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
     proc_arg = proc_arg->next;
     args = args->next;
   }
+  /* Environment has to come here because procedure arguments values shall be
+   * evaluated in the previous environment */
+  env = exec_env;
 
   Obj *res = NULL;
   ASTNode *body = proc->lambda_ast->caller;
@@ -213,7 +253,50 @@ Obj *handle_proc_call(ASTNode *node) {
     Obj *op2 = eval_ast(node->args->next);              // this is op2
     Obj_lt_operation(result, result, op2);
     return result;
+  } else if (match_tok(node->tok, "div")) {
+    debug_log("`div` Handled!");
+    size_t argc = get_argc(node->args);
+    if (argc != 2) {
+      tok_error_at(node->tok,
+                   "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(node->args));
+      eval_error = true;
+      return NULL;
+    }
+    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
+    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj_div_operation(result, result, op2);
+    return result;
+  } else if (match_tok(node->tok, "remainder")) {
+    debug_log("`remainder` Handled!");
+    size_t argc = get_argc(node->args);
+    if (argc != 2) {
+      tok_error_at(node->tok,
+                   "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(node->args));
+      eval_error = true;
+      return NULL;
+    }
+    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
+    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj_mod_operation(result, result, op2);
+    return result;
+  } else if (match_tok(node->tok, "=")) {
+    debug_log("= Handled!");
+    size_t argc = get_argc(node->args);
+    if (argc != 2) {
+      tok_error_at(node->tok,
+                   "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(node->args));
+      eval_error = true;
+      return NULL;
+    }
+    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
+    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj_eq_operation(result, result, op2);
+    return result;
   }
+
   Obj *caller = eval_ast(node->caller);
   if (!caller)
     return NULL;
