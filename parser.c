@@ -102,16 +102,15 @@ ASTNode *expression() {
       node->caller = expression();
       if (!node->caller)
         return NULL;
-      ASTNode *args = NULL;
-      ASTNode *last_arg = args;
+      node->args = NULL;
+      ASTNode *last_arg = NULL;
       while (cur && !match_tok(cur, ")")) {
         ASTNode *arg = expression();
-        if (!args) {
-          args = last_arg = arg;
-        } else
+        if (!node->args)
+          node->args = last_arg = arg;
+        else
           last_arg = last_arg->next = arg;
       }
-      node->args = args;
       if (consume_rbr()) {
         return node;
       }

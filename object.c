@@ -94,14 +94,19 @@ size_t get_argc(ASTNode *args) {
   return argc;
 }
 
-Obj *try_proc_call(Obj *proc, ASTNode *args) {
+/* repr_tok is for printing error info */
+Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
+  debug_log("trying proc call eval...");
   if (proc->typ != LAMBDA_TY) {
     tok_error_at(args->tok, "not a procedure");
     eval_error = true;
     return NULL;
   }
-  if (get_argc(proc->lambda_ast->args) != get_argc(args)) {
-    tok_error_at(args->tok, "wrong number of arguments");
+  const size_t proc_argc = get_argc(proc->lambda_ast->args);
+  const size_t passed_argc = get_argc(args);
+  if (proc_argc != passed_argc) {
+    tok_error_at(repr_tok, "wrong number of arguments: expects %ld, got %ld",
+                 proc_argc, passed_argc);
     eval_error = true;
     return NULL;
   }
@@ -155,7 +160,7 @@ Obj *handle_proc_call(ASTNode *node) {
     return result;
   }
   Obj *caller = eval_ast(node->caller);
-  return try_proc_call(caller, node->args);
+  return try_proc_call(node->tok, caller, node->args);
 }
 
 static bool is_not_false(Obj *obj) {
