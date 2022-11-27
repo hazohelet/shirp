@@ -133,8 +133,10 @@ void *shirp_realloc(void *ptr, size_t size);
 void verror_at(char *loc, char *fmt, va_list ap);
 void tok_error_at(Token *tok, char *fmt, ...);
 void debug_log(char *fmt, ...);
+void debug_printf(char *fmt, ...);
 
 void dump_tokens(Token *tokens);
 void dump_hashtable(HashTable *ht);
+void dump_env(Frame *env);
 
 #endif

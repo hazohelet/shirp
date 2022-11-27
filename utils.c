@@ -41,18 +41,25 @@ void verror_at(char *loc, char *fmt, va_list ap) {
   fprintf(stderr, "\n");
 }
 
-void vdebug_log(char *fmt, va_list ap) {
+void debug_printf(char *fmt, ...) {
+#ifndef DEBUG
+  return;
+#endif
+  va_list ap;
+  va_start(ap, fmt);
   vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
+  va_end(ap);
 }
 
 void debug_log(char *fmt, ...) {
-#ifdef DEBUG
+#ifndef DEBUG
+  return;
+#endif
   va_list ap;
   va_start(ap, fmt);
-  vdebug_log(fmt, ap);
-#endif
-  fmt = fmt; // dummy for avoiding unused-variable warning
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  va_end(ap);
 }
 
 /*
@@ -111,8 +118,21 @@ void dump_hashtable(HashTable *ht) {
   for (size_t i = 0; i < ht->capacity; i++) {
     Entry *entry = ht->buckets[i];
     if (entry && entry != TOMBSTONE) {
-      fprintf(stderr, "`%.*s` registered\n", (int)entry->keylen, entry->key);
+      fprintf(stderr, "`%.*s` registered as ", (int)entry->keylen, entry->key);
+      print_obj(entry->val);
     }
   }
   fprintf(stderr, "---HashTable--END---\n");
+}
+
+void dump_env(Frame *env) {
+#ifndef DEBUG
+  return;
+#endif
+  fprintf(stderr, "---Environment---\n");
+  while (env) {
+    dump_hashtable(env->table);
+    env = env->outer;
+  }
+  fprintf(stderr, "---FINISHENV---\n");
 }

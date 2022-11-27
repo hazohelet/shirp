@@ -83,6 +83,7 @@ int main() {
     if (eval_error) {
       continue;
     }
+    dump_env(env);
     if (res)
       print_obj(res);
     else

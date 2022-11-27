@@ -75,9 +75,11 @@ ASTNode *program() { return command_or_definition(); }
 
 static bool is_definition_start() {
   Token *peek = cur->next;
+  /*
   static char *kw[] = {"define", "define-values", "define-record-type",
                        "define-syntax"};
-  return match_tok(cur, "(") && peek && match_anyof_tok(peek, kw);
+                       */
+  return match_tok(cur, "(") && peek && match_tok(peek, "define");
 }
 
 ASTNode *command_or_definition() {
@@ -153,7 +155,7 @@ ASTNode *expression() {
         debug_log("theres defs");
       }
       while (is_definition_start()) {
-        debug_log("definitions are parsed!");
+        debug_log("lambda definitions are parsed!");
         if (!node->caller)
           node->caller = last_body = definition();
         else

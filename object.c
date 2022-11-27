@@ -54,6 +54,13 @@ Obj *new_float_obj(double val) {
   return obj;
 }
 
+Obj *copy_value_obj(Obj *obj) {
+  Obj *new_obj = (Obj *)shirp_malloc(sizeof(Obj));
+  new_obj->typ = obj->typ;
+  new_obj->num_val = obj->num_val;
+  return new_obj;
+}
+
 void convert_to_float(Obj *obj) {
   if (obj->typ == INT_TY) {
     obj->typ = FLOAT_TY;
@@ -85,6 +92,30 @@ void Obj_sub_operation(Obj *dst, Obj *op1, Obj *op2) {
   }
 }
 
+void Obj_mul_operation(Obj *dst, Obj *op1, Obj *op2) {
+  if (op1->typ == INT_TY && op2->typ == INT_TY) {
+    dst->typ = INT_TY;
+    dst->num_val.int_val = op1->num_val.int_val * op2->num_val.int_val;
+  } else {
+    dst->typ = FLOAT_TY;
+    convert_to_float(op1);
+    convert_to_float(op2);
+    dst->num_val.float_val = op1->num_val.float_val * op2->num_val.float_val;
+  }
+}
+
+void Obj_lt_operation(Obj *dst, Obj *op1, Obj *op2) {
+  if (op1->typ == INT_TY && op2->typ == INT_TY) {
+    dst->typ = BOOL_TY;
+    dst->num_val.bool_val = op1->num_val.int_val < op2->num_val.int_val;
+  } else {
+    convert_to_float(op1);
+    convert_to_float(op2);
+    dst->typ = BOOL_TY;
+    dst->num_val.bool_val = op1->num_val.float_val < op2->num_val.float_val;
+  }
+}
+
 size_t get_argc(ASTNode *args) {
   size_t argc = 0;
   while (args) {
@@ -96,9 +127,9 @@ size_t get_argc(ASTNode *args) {
 
 /* repr_tok is for printing error info */
 Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
-  debug_log("trying proc call eval...");
+  debug_log("trying proc call `%.*s` eval...", repr_tok->len, repr_tok->loc);
   if (proc->typ != LAMBDA_TY) {
-    tok_error_at(args->tok, "not a procedure");
+    tok_error_at(repr_tok, "not a procedure");
     eval_error = true;
     return NULL;
   }
@@ -111,11 +142,15 @@ Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
     return NULL;
   }
 
+  Frame *saved_global_env = env;       // save for the function epilogue
   Frame *exec_env = proc->saved_env;   // retrieve the saved env
+  exec_env->outer = env;               // set the outer env
+                                       // set the outer env
   exec_env = push_new_frame(exec_env); // new frame for the execution
                                        // environment: shall be popped later
-  Frame *saved_global_env = env;       // save for the function epilogue
-  env = exec_env;                      // exec in this env
+  frame_insert_obj(exec_env, repr_tok->loc, repr_tok->len,
+                   proc); // for recursive calls
+  env = exec_env;         // exec in this env
 
   ASTNode *proc_arg = proc->lambda_ast->args;
   /* set up arguments to new frame */
@@ -128,14 +163,16 @@ Obj *try_proc_call(Token *repr_tok, Obj *proc, ASTNode *args) {
     proc_arg = proc_arg->next;
     args = args->next;
   }
+  dump_env(env);
+
   Obj *res = NULL;
   ASTNode *body = proc->lambda_ast->caller;
   while (body) {
     res = eval_ast(body);
     body = body->next;
   }
-  pop_frame(exec_env);    // pop the execution environment
-  env = saved_global_env; // getting env to as it was
+  exec_env = pop_frame(exec_env); // pop the execution environment
+  env = saved_global_env;         // getting env to as it was
   return res;
 }
 
@@ -151,15 +188,41 @@ Obj *handle_proc_call(ASTNode *node) {
     return result;
   } else if (match_tok(node->tok, "-")) {
     debug_log("- Handled!");
-    Obj *result = eval_ast(node->args);
+    Obj *result = copy_value_obj(eval_ast(node->args));
     ASTNode *arg = node->args->next;
     while (arg) {
       Obj_sub_operation(result, result, eval_ast(arg));
       arg = arg->next;
     }
     return result;
+  } else if (match_tok(node->tok, "*")) {
+    debug_log("* evaled!");
+    Obj *result = copy_value_obj(eval_ast(node->args));
+    ASTNode *arg = node->args->next;
+    while (arg) {
+      Obj_mul_operation(result, result, eval_ast(arg));
+      arg = arg->next;
+    }
+    return result;
+  } else if (match_tok(node->tok, "<")) {
+    debug_log("< Handled!");
+    size_t argc = get_argc(node->args);
+    if (argc < 2) {
+      tok_error_at(node->tok,
+                   "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(node->args));
+      eval_error = true;
+      return NULL;
+    } else if (argc > 2)
+      return false_obj;
+    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
+    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj_lt_operation(result, result, op2);
+    return result;
   }
   Obj *caller = eval_ast(node->caller);
+  if (!caller)
+    return NULL;
   return try_proc_call(node->tok, caller, node->args);
 }
 
