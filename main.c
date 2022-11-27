@@ -5,7 +5,9 @@
 extern Token *cur;
 extern bool lexical_error;
 extern bool syntax_error;
+extern bool eval_error;
 extern int brackets_left;
+Frame *env;
 
 char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
   char c;
@@ -36,7 +38,10 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
   }
 }
 
+void shirp_init() { env = push_new_frame(NULL); }
+
 int main() {
+  shirp_init();
   do {
     fprintf(stderr, ">> ");
 
@@ -48,6 +53,7 @@ int main() {
     brackets_left = 0;
     lexical_error = false;
     syntax_error = false;
+    eval_error = false;
     Token head = {};
     Token *tail = tokenize(line, &head);
     if (lexical_error) {
@@ -67,16 +73,21 @@ int main() {
     /* tokenization finished */
     cur = head.next;
     dump_tokens(cur);
-    ASTNode *ast = expr();
+    ASTNode *ast = program();
     if (syntax_error) {
       free(line);
       continue;
     }
     Obj *res = eval_ast(ast);
+    dump_hashtable(env->table);
+    if (eval_error) {
+      continue;
+    }
     if (res)
       print_obj(res);
+    else
+      debug_log("nil");
 
-    free(line);
   } while (1);
 
   return 0;

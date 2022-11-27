@@ -5,8 +5,7 @@ Token *cur;
 bool syntax_error = false;
 // reports error with its position
 
-static void error_at(Token *tok, char *fmt, ...) {
-  fprintf(stderr, "parser error: \n");
+void tok_error_at(Token *tok, char *fmt, ...) {
   syntax_error = true;
   va_list ap;
   va_start(ap, fmt);
@@ -41,9 +40,22 @@ static bool consume_rbr() {
   return false;
 }
 
+static bool consume_tok(char *str) {
+  if (match_tok(cur, str)) {
+    read_next();
+    return true;
+  }
+  return false;
+}
+
+void expect_lbr() {
+  if (!consume_lbr())
+    tok_error_at(cur, "expected '('");
+}
+
 void expect_rbr() {
   if (!consume_rbr())
-    error_at(cur, "expected '('");
+    tok_error_at(cur, "expected ')'");
 }
 
 static bool consume(TokenKind kind) {
@@ -54,10 +66,28 @@ static bool consume(TokenKind kind) {
   return false;
 }
 
-ASTNode *expr() {
+ASTNode *command_or_definition();
+ASTNode *command();
+ASTNode *definition();
+ASTNode *expression();
+
+ASTNode *program() { return command_or_definition(); }
+
+ASTNode *command_or_definition() {
+  Token *peek = cur->next;
+  char *kw[] = {"define", "define-values", "define-record-type",
+                "define-syntax"};
+  if (peek && match_anyof_tok(peek, kw))
+    return definition();
+  return command();
+}
+
+ASTNode *command() { return expression(); }
+
+ASTNode *expression() {
   if (consume(TOKEN_IDENT)) {
-    debug_log("Identifier read");
-    return new_ast_node(ND_IDENT, cur);
+    debug_log("Identifier read: %.*s", prev->len, prev->loc);
+    return new_ast_node(ND_IDENT, prev);
   } else if (consume(TOKEN_NUMBER)) {
     debug_log("Number read");
     return new_ast_node(ND_NUMBER, prev);
@@ -65,13 +95,13 @@ ASTNode *expr() {
     if (cur->kind != TOKEN_KEYWORD) {
       debug_log("Proc Call!");
       ASTNode *node = new_ast_node(ND_PROCCALL, cur);
-      node->caller = expr();
+      node->caller = expression();
       if (!node->caller)
         return NULL;
       ASTNode *args = NULL;
       ASTNode *last_arg = args;
       while (cur && !match_tok(cur, ")")) {
-        ASTNode *arg = expr();
+        ASTNode *arg = expression();
         if (!args) {
           args = last_arg = arg;
         } else
@@ -85,11 +115,11 @@ ASTNode *expr() {
       debug_log("If statement!");
       ASTNode *node = new_ast_node(ND_IF, cur);
       read_next();
-      ASTNode *test = expr();
-      ASTNode *consequent = expr();
+      ASTNode *test = expression();
+      ASTNode *consequent = expression();
       ASTNode *alternate = NULL;
       if (!match_tok(cur, ")")) {
-        alternate = expr();
+        alternate = expression();
       }
       expect_rbr();
       node->args = test;
@@ -98,6 +128,21 @@ ASTNode *expr() {
       return node;
     }
   }
-  error_at(cur, "unexpected token");
+  tok_error_at(cur, "unexpected token");
+  return NULL;
+}
+
+ASTNode *definition() {
+  expect_lbr();
+  if (consume_tok("define")) {
+    if (consume(TOKEN_IDENT)) {
+      ASTNode *node = new_ast_node(ND_DEFINE, prev);
+      node->caller = new_ast_node(ND_IDENT, prev);
+      node->args = expression();
+      expect_rbr();
+      return node;
+    }
+  }
+  tok_error_at(cur, "expected identifier");
   return NULL;
 }

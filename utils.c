@@ -67,6 +67,13 @@ bool match_tok(Token *tok, char *keyword) {
   return match_str(tok->loc, keyword, tok->len);
 }
 
+bool match_anyof_tok(Token *tok, char *keywords[]) {
+  for (int i = 0; keywords[i]; i++)
+    if (match_tok(tok, keywords[i]))
+      return true;
+  return false;
+}
+
 void dump_tokens(Token *tokens) {
 #ifndef DEBUG
   return;
@@ -92,4 +99,20 @@ void dump_tokens(Token *tokens) {
     tok = tok->next;
   } while (tok);
   fprintf(stderr, "NULL\n");
+}
+
+#define TOMBSTONE ((void *)-1)
+
+void dump_hashtable(HashTable *ht) {
+#ifndef DEBUG
+  return;
+#endif
+  fprintf(stderr, "---HashTable---\n");
+  for (size_t i = 0; i < ht->capacity; i++) {
+    Entry *entry = ht->buckets[i];
+    if (entry && entry != TOMBSTONE) {
+      fprintf(stderr, "`%.*s` registered\n", (int)entry->keylen, entry->key);
+    }
+  }
+  fprintf(stderr, "---HashTable--END---\n");
 }

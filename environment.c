@@ -56,6 +56,10 @@ void hashtable_insert(HashTable *ht, char *key, size_t keylen, void *val) {
       ht->buckets[index] = entry;
       ht->used++;
       return;
+    } else if (ht->buckets[index]->keylen == keylen &&
+               match_str(ht->buckets[index]->key, key, keylen)) {
+      ht->buckets[index]->val = val;
+      return;
     }
     index = (index + 1) % ht->capacity;
   }
@@ -120,16 +124,21 @@ Frame *pop_frame(Frame *frame) {
 
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val) {
   hashtable_insert(frame->table, key, keylen, val);
+  debug_log("`%.*s` has been registerred to table %p", keylen, key,
+            frame->table);
 }
 
-void *get_obj(Frame *frame, char *key, size_t keylen) {
-  while (frame != NULL) {
+void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
+  debug_log("Frame searching for object: `%.*s`", keylen, key);
+  while (frame) {
     Entry *entry = hashtable_get(frame->table, key, keylen);
-    if (entry != NULL) {
+    if (entry) {
+      debug_log("Key found! %.*s", keylen, key);
       return entry->val;
     }
     frame = frame->outer;
   }
+  debug_log("Key not found in Frames: %.*s", keylen, key);
   return NULL;
 }
 

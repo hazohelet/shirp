@@ -36,7 +36,7 @@ struct Token {
 Token *tokenize(char *input, Token *last_token);
 bool match_str(char *str, char *keyword, size_t len);
 bool match_tok(Token *tok, char *keyword);
-void dump_tokens(Token *tokens);
+bool match_anyof_tok(Token *tok, char *keywords[]);
 
 typedef enum {
   UNDEF_TY,
@@ -87,7 +87,8 @@ struct ASTNode {
   ASTNode *next;   // if this is an argument, next is needed
 };
 
-ASTNode *expr();
+ASTNode *program();
+ASTNode *expression();
 void dump_tree(ASTNode *node);
 char *get_command(ASTNode *node);
 void free_ast(ASTNode *node);
@@ -117,7 +118,7 @@ struct Frame {
 Frame *push_new_frame(Frame *outer);
 Frame *pop_frame(Frame *frame);
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val);
-void *get_obj(Frame *frame, char *key, size_t keylen);
+void *frame_get_obj(Frame *frame, char *key, size_t keylen);
 
 /* Evaluation Trees */
 Obj *eval_ast(ASTNode *node);
@@ -128,6 +129,10 @@ void *shirp_malloc(size_t size);
 void *shirp_calloc(size_t n, size_t size);
 void *shirp_realloc(void *ptr, size_t size);
 void verror_at(char *loc, char *fmt, va_list ap);
+void tok_error_at(Token *tok, char *fmt, ...);
 void debug_log(char *fmt, ...);
+
+void dump_tokens(Token *tokens);
+void dump_hashtable(HashTable *ht);
 
 #endif

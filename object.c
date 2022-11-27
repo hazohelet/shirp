@@ -1,5 +1,8 @@
 #include "shirp.h"
 
+extern Frame *env;
+bool eval_error = false;
+
 void print_obj(Obj *obj) {
   switch (obj->typ) {
   case UNDEF_TY:
@@ -109,6 +112,8 @@ static bool is_not_false(Obj *obj) {
 Obj *eval_if(ASTNode *node) {
   ASTNode *test = node->args;
   Obj *test_val = eval_ast(test);
+  if (eval_error)
+    return NULL;
   ASTNode *consequent = test->next;
   ASTNode *alternate = consequent->next;
 
@@ -117,14 +122,29 @@ Obj *eval_if(ASTNode *node) {
   return eval_ast(alternate);
 }
 
+void handle_definition(ASTNode *node) {
+  debug_log("definition handled!");
+  frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
+                   eval_ast(node->args));
+}
+
 Obj *eval_ast(ASTNode *node) {
   if (!node) {
     return new_obj(UNDEF_TY);
   }
   switch (node->kind) {
   case ND_IDENT:
-    debug_log("To be implemented");
-    break;
+    debug_log("handle identifier in eval, env: %p, outer: %p", env, env->outer);
+    debug_log("key: %.*s", node->tok->len, node->tok->loc);
+    Obj *obj = frame_get_obj(env, node->tok->loc, node->tok->len);
+    if (obj)
+      return obj;
+    else {
+      eval_error = true;
+      tok_error_at(node->tok, "undefined variable: %.*s", node->tok->len,
+                   node->tok->loc);
+      return NULL;
+    }
   case ND_NUMBER:
     return node->tok->obj;
   case ND_IF:
@@ -135,7 +155,7 @@ Obj *eval_ast(ASTNode *node) {
     debug_log("To be implemented");
     break;
   case ND_DEFINE:
-    debug_log("To be implemented");
+    handle_definition(node);
     break;
   }
   return NULL;
