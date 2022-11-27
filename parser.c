@@ -73,11 +73,15 @@ ASTNode *expression();
 
 ASTNode *program() { return command_or_definition(); }
 
-ASTNode *command_or_definition() {
+static bool is_definition_start() {
   Token *peek = cur->next;
-  char *kw[] = {"define", "define-values", "define-record-type",
-                "define-syntax"};
-  if (peek && match_anyof_tok(peek, kw))
+  static char *kw[] = {"define", "define-values", "define-record-type",
+                       "define-syntax"};
+  return match_tok(cur, "(") && peek && match_anyof_tok(peek, kw);
+}
+
+ASTNode *command_or_definition() {
+  if (is_definition_start())
     return definition();
   return command();
 }
@@ -86,14 +90,14 @@ ASTNode *command() { return expression(); }
 
 ASTNode *expression() {
   if (consume(TOKEN_IDENT)) {
-    debug_log("Identifier read: %.*s", prev->len, prev->loc);
+    debug_log("Identifier parsed: %.*s", prev->len, prev->loc);
     return new_ast_node(ND_IDENT, prev);
   } else if (consume(TOKEN_NUMBER)) {
-    debug_log("Number read");
+    debug_log("Number parsed");
     return new_ast_node(ND_NUMBER, prev);
   } else if (consume_lbr()) {
     if (cur->kind != TOKEN_KEYWORD) {
-      debug_log("Proc Call!");
+      debug_log("Proc Call parsed!");
       ASTNode *node = new_ast_node(ND_PROCCALL, cur);
       node->caller = expression();
       if (!node->caller)
@@ -111,10 +115,9 @@ ASTNode *expression() {
       if (consume_rbr()) {
         return node;
       }
-    } else if (match_tok(cur, "if")) {
+    } else if (consume_tok("if")) {
       debug_log("If statement!");
       ASTNode *node = new_ast_node(ND_IF, cur);
-      read_next();
       ASTNode *test = expression();
       ASTNode *consequent = expression();
       ASTNode *alternate = NULL;
@@ -126,6 +129,53 @@ ASTNode *expression() {
       test->next = consequent;
       consequent->next = alternate;
       return node;
+    } else if (consume_tok("lambda")) {
+      debug_log("lambda is parsed!");
+      /* read formals */
+      expect_lbr();
+      ASTNode *node = new_ast_node(ND_LAMBDA, cur);
+      ASTNode *last_arg = NULL;
+      debug_log("lambda formals are parsed!");
+      while (consume(TOKEN_IDENT)) {
+        debug_log("Identifier parsed: %.*s", prev->len, prev->loc);
+        if (!node->args)
+          node->args = last_arg = new_ast_node(ND_IDENT, prev);
+        else
+          last_arg = last_arg->next = new_ast_node(ND_IDENT, prev);
+      }
+      expect_rbr();
+      /* read <body> -> <definition>* <expression>+ */
+      debug_log("lambda body is parsed!");
+      ASTNode *last_body = NULL;
+      dump_tokens(cur);
+      if (!is_definition_start()) {
+        debug_log("no defs");
+      } else {
+        debug_log("theres defs");
+      }
+      while (is_definition_start()) {
+        debug_log("definitions are parsed!");
+        if (!node->caller)
+          node->caller = last_body = definition();
+        else
+          last_body = last_body->next = definition();
+      }
+      /* <expression> */
+      debug_log("lambda body-expression is parsed");
+      if (!node->caller)
+        node->caller = last_body = expression();
+      else
+        last_body = last_body->next = expression();
+
+      /* <expression>* */
+      while (!consume_rbr()) {
+        if (!node->caller)
+          node->caller = last_body = expression();
+        else
+          last_body = last_body->next = expression();
+      }
+      debug_log("lambda has been parsed");
+      return node;
     }
   }
   tok_error_at(cur, "unexpected token");
@@ -133,6 +183,7 @@ ASTNode *expression() {
 }
 
 ASTNode *definition() {
+  debug_log("definition is parsed");
   expect_lbr();
   if (consume_tok("define")) {
     if (consume(TOKEN_IDENT)) {

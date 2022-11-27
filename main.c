@@ -79,7 +79,7 @@ int main() {
       continue;
     }
     Obj *res = eval_ast(ast);
-    dump_hashtable(env->table);
+    // dump_hashtable(env->table);
     if (eval_error) {
       continue;
     }

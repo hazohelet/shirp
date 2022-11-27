@@ -17,8 +17,11 @@ void print_obj(Obj *obj) {
   case FLOAT_TY:
     fprintf(stderr, "%lf\n", obj->num_val.float_val);
     break;
+  case LAMBDA_TY:
+    fprintf(stderr, "#<closure>\n");
+    break;
   default:
-    fprintf(stderr, "Eval Error");
+    fprintf(stderr, "Eval Error\n");
   }
 }
 
@@ -82,6 +85,55 @@ void Obj_sub_operation(Obj *dst, Obj *op1, Obj *op2) {
   }
 }
 
+size_t get_argc(ASTNode *args) {
+  size_t argc = 0;
+  while (args) {
+    argc++;
+    args = args->next;
+  }
+  return argc;
+}
+
+Obj *try_proc_call(Obj *proc, ASTNode *args) {
+  if (proc->typ != LAMBDA_TY) {
+    tok_error_at(args->tok, "not a procedure");
+    eval_error = true;
+    return NULL;
+  }
+  if (get_argc(proc->lambda_ast->args) != get_argc(args)) {
+    tok_error_at(args->tok, "wrong number of arguments");
+    eval_error = true;
+    return NULL;
+  }
+
+  Frame *exec_env = proc->saved_env;   // retrieve the saved env
+  exec_env = push_new_frame(exec_env); // new frame for the execution
+                                       // environment: shall be popped later
+  Frame *saved_global_env = env;       // save for the function epilogue
+  env = exec_env;                      // exec in this env
+
+  ASTNode *proc_arg = proc->lambda_ast->args;
+  /* set up arguments to new frame */
+  while (proc_arg) {
+    frame_insert_obj(env, proc_arg->tok->loc, proc_arg->tok->len,
+                     eval_ast(args));
+    if (eval_error) {
+      return NULL;
+    }
+    proc_arg = proc_arg->next;
+    args = args->next;
+  }
+  Obj *res = NULL;
+  ASTNode *body = proc->lambda_ast->caller;
+  while (body) {
+    res = eval_ast(body);
+    body = body->next;
+  }
+  pop_frame(exec_env);    // pop the execution environment
+  env = saved_global_env; // getting env to as it was
+  return res;
+}
+
 Obj *handle_proc_call(ASTNode *node) {
   if (match_tok(node->tok, "+")) {
     debug_log("+ Handled!");
@@ -102,7 +154,8 @@ Obj *handle_proc_call(ASTNode *node) {
     }
     return result;
   }
-  return NULL;
+  Obj *caller = eval_ast(node->caller);
+  return try_proc_call(caller, node->args);
 }
 
 static bool is_not_false(Obj *obj) {
@@ -126,6 +179,14 @@ void handle_definition(ASTNode *node) {
   debug_log("definition handled!");
   frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
                    eval_ast(node->args));
+}
+
+Obj *handle_lambda(ASTNode *node) {
+  debug_log("lambda evaled!");
+  Obj *obj = new_obj(LAMBDA_TY);
+  obj->lambda_ast = node;
+  obj->saved_env = copied_environment(env);
+  return obj;
 }
 
 Obj *eval_ast(ASTNode *node) {
@@ -152,8 +213,7 @@ Obj *eval_ast(ASTNode *node) {
   case ND_PROCCALL:
     return handle_proc_call(node);
   case ND_LAMBDA:
-    debug_log("To be implemented");
-    break;
+    return handle_lambda(node);
   case ND_DEFINE:
     handle_definition(node);
     break;

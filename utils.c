@@ -64,7 +64,7 @@ bool match_str(char *str, char *keyword, size_t len) {
 }
 
 bool match_tok(Token *tok, char *keyword) {
-  return match_str(tok->loc, keyword, tok->len);
+  return tok->len == strlen(keyword) && match_str(tok->loc, keyword, tok->len);
 }
 
 bool match_anyof_tok(Token *tok, char *keywords[]) {

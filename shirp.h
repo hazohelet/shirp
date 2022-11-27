@@ -23,6 +23,8 @@ typedef enum {
 } TokenKind;
 
 typedef struct Token Token;
+typedef struct Frame Frame;
+typedef struct ASTNode ASTNode;
 typedef struct Obj Obj;
 
 struct Token {
@@ -61,8 +63,8 @@ struct Obj {
   /* String Value */
   char *str_val;
   /* Lambda attributes */
-  char **params;
-  Obj *body;
+  Frame *saved_env;
+  ASTNode *lambda_ast;
   /* List attributes */
   Obj *car;
   Obj *cdr;
@@ -78,13 +80,13 @@ typedef enum {
   ND_PROCCALL,
 } NodeKind;
 
-typedef struct ASTNode ASTNode;
 struct ASTNode {
   NodeKind kind;
-  Token *tok;      // representative token
-  ASTNode *caller; // procedure calls caller expression
-  ASTNode *args;   // procedure calls hold arguments
-  ASTNode *next;   // if this is an argument, next is needed
+  Token *tok; // representative token
+  ASTNode
+      *caller;   // procedure calls caller expression, or it holds lambda bodies
+  ASTNode *args; // procedure calls hold arguments
+  ASTNode *next; // if this is an argument, next is needed
 };
 
 ASTNode *program();
@@ -108,7 +110,6 @@ typedef struct {
   Entry **buckets;
 } HashTable;
 
-typedef struct Frame Frame;
 struct Frame {
   Frame *outer;
   HashTable *table;
@@ -119,6 +120,7 @@ Frame *push_new_frame(Frame *outer);
 Frame *pop_frame(Frame *frame);
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val);
 void *frame_get_obj(Frame *frame, char *key, size_t keylen);
+Frame *copied_environment(Frame *frame);
 
 /* Evaluation Trees */
 Obj *eval_ast(ASTNode *node);

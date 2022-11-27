@@ -107,25 +107,19 @@ Frame *push_new_frame(Frame *outer) {
   Frame *frame = (Frame *)shirp_malloc(sizeof(Frame));
   frame->outer = outer;
   frame->table = new_hash_table();
-  frame->is_held = false;
   return frame;
 }
 
 Frame *pop_frame(Frame *frame) {
   Frame *outer = frame->outer;
-  if (frame->is_held) {
-    outer->is_held = true;
-  } else {
-    free_table(frame->table);
-    free(frame);
-  }
+  free_table(frame->table);
+  free(frame);
   return outer;
 }
 
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val) {
   hashtable_insert(frame->table, key, keylen, val);
-  debug_log("`%.*s` has been registerred to table %p", keylen, key,
-            frame->table);
+  debug_log("`%.*s` has been registerred to frame %p", keylen, key, frame);
 }
 
 void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
@@ -140,6 +134,28 @@ void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
   }
   debug_log("Key not found in Frames: %.*s", keylen, key);
   return NULL;
+}
+
+void copy_frame(Frame *dst, Frame *src) {
+  for (size_t i = 0; i < src->table->capacity; i++) {
+    Entry *entry = src->table->buckets[i];
+    if (entry == NULL || entry == TOMBSTONE)
+      continue;
+    frame_insert_obj(dst, entry->key, entry->keylen, entry->val);
+  }
+}
+
+void copy_environment_recursive(Frame *dst, Frame *src) {
+  if (src == NULL)
+    return;
+  copy_environment_recursive(dst, src->outer);
+  copy_frame(dst, src);
+}
+
+Frame *copied_environment(Frame *frame) {
+  Frame *new_frame = push_new_frame(NULL);
+  copy_environment_recursive(new_frame, frame);
+  return new_frame;
 }
 
 /* test
