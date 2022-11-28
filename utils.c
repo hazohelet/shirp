@@ -31,13 +31,24 @@ void *shirp_realloc(void *ptr, size_t size) {
 }
 
 // reports error with its position
-void verror_at(char *loc, char *fmt, va_list ap) {
-  int offset = PROMPT_OFFSET;
-  for (char *p = loc; *p && *p != '\n'; p--)
-    offset++;
-  offset--;
-  fprintf(stderr, "%*s^ ", offset, "");
+void verror_at(char *loc, size_t len, char *fmt, va_list ap) {
+  char *head = loc;
+  char *tail = loc;
+
+  while (*(head - 1) && *(head - 1) != '\n')
+    head--;
+  while (*tail && *(tail + 1) && *(tail + 1) != '\n')
+    tail++;
+  int line_len = (int)(tail - head + 1);
+  int indent = (int)(loc - head);
+
+  fprintf(stderr, "\x1b[1m\x1b[31merror\x1b[0m: ");
   vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "   %.*s\n", line_len, head);
+  fprintf(stderr, "   %*s\x1b[1m\x1b[31m^\x1b[0m", indent, "");
+  for (size_t i = 0; i < len - 1; i++)
+    fprintf(stderr, "\x1b[1m\x1b[31m~\x1b[0m");
   fprintf(stderr, "\n");
 }
 
@@ -91,7 +102,6 @@ void dump_tokens(Token *tokens) {
   }
   Token *tok = tokens;
   do {
-    /*
     if (tok && tok->kind == TOKEN_NUMBER) {
       Obj *obj = tok->obj;
       if (obj->typ == INT_TY)
@@ -101,8 +111,7 @@ void dump_tokens(Token *tokens) {
         fprintf(stderr, "`%.*s`[F'%lf]-> ", (int)tok->len, tok->loc,
                 obj->num_val.float_val);
     } else
-    */
-    fprintf(stderr, "`%.*s` (%d)-> ", (int)tok->len, tok->loc, tok->kind);
+      fprintf(stderr, "`%.*s` (%d)-> ", (int)tok->len, tok->loc, tok->kind);
     tok = tok->next;
   } while (tok);
   fprintf(stderr, "NULL\n");

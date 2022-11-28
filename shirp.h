@@ -132,7 +132,7 @@ void print_obj(Obj *obj);
 void *shirp_malloc(size_t size);
 void *shirp_calloc(size_t n, size_t size);
 void *shirp_realloc(void *ptr, size_t size);
-void verror_at(char *loc, char *fmt, va_list ap);
+void verror_at(char *loc, size_t size, char *fmt, va_list ap);
 void tok_error_at(Token *tok, char *fmt, ...);
 void debug_log(char *fmt, ...);
 void debug_printf(char *fmt, ...);

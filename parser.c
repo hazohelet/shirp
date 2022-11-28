@@ -9,7 +9,7 @@ void tok_error_at(Token *tok, char *fmt, ...) {
   syntax_error = true;
   va_list ap;
   va_start(ap, fmt);
-  verror_at(tok->loc, fmt, ap);
+  verror_at(tok->loc, tok->len, fmt, ap);
 }
 
 static ASTNode *new_ast_node(NodeKind kind, Token *tok) {

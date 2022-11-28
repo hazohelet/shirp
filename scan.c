@@ -6,11 +6,11 @@ bool lexical_error = false;
 extern Obj *true_obj;
 extern Obj *false_obj;
 
-static void error_at(char *loc, char *fmt, ...) {
+static void error_at(char *loc, size_t len, char *fmt, ...) {
   lexical_error = true;
   va_list ap;
   va_start(ap, fmt);
-  verror_at(loc, fmt, ap);
+  verror_at(loc, len, fmt, ap);
 }
 
 static Token *new_token(TokenKind kind, char *start, char *end) {
@@ -134,7 +134,7 @@ Token *tokenize(char *input, Token *last_tok) {
         continue;
       } else if (*c == ')') {
         if (brackets_left <= 0) {
-          error_at(c, "unexpected ')'");
+          error_at(c, 1, "unexpected ')'");
           return last_tok;
         }
         brackets_left--;
@@ -145,7 +145,7 @@ Token *tokenize(char *input, Token *last_tok) {
         char *start = ++c;
         while (*c != '|') {
           if (*c == '\0') {
-            error_at(start - 1, "unterminated '|'");
+            error_at(start - 1, 1, "unterminated '|'");
             return last_tok;
           }
           c++;
@@ -180,7 +180,7 @@ Token *tokenize(char *input, Token *last_tok) {
       }
       continue;
     }
-    error_at(c, "invalid character: %c", *c);
+    error_at(c, 1, "invalid character: %c", *c);
     break;
   }
   return last_tok;
