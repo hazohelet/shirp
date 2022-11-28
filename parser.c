@@ -5,6 +5,10 @@ Token *cur;
 bool syntax_error = false;
 // reports error with its position
 
+#define RETURN_IF_ERROR()                                                      \
+  if (syntax_error)                                                            \
+    return NULL;
+
 void tok_error_at(Token *tok, char *fmt, ...) {
   syntax_error = true;
   va_list ap;
@@ -53,10 +57,18 @@ void expect_lbr() {
     tok_error_at(cur, "expected '('");
 }
 
+#define EXPECT_LBR()                                                           \
+  expect_lbr();                                                                \
+  RETURN_IF_ERROR()
+
 void expect_rbr() {
   if (!consume_rbr())
     tok_error_at(cur, "expected ')'");
 }
+
+#define EXPECT_RBR()                                                           \
+  expect_rbr();                                                                \
+  RETURN_IF_ERROR()
 
 static bool consume(TokenKind kind) {
   if (cur->kind == kind) {
@@ -91,6 +103,7 @@ ASTNode *command_or_definition() {
 ASTNode *command() { return expression(); }
 
 ASTNode *expression() {
+  RETURN_IF_ERROR()
   if (consume(TOKEN_IDENT)) {
     debug_log("Identifier parsed: %.*s", prev->len, prev->loc);
     return new_ast_node(ND_IDENT, prev);
@@ -125,7 +138,7 @@ ASTNode *expression() {
       if (!match_tok(cur, ")")) {
         alternate = expression();
       }
-      expect_rbr();
+      EXPECT_RBR()
       node->args = test;
       test->next = consequent;
       consequent->next = alternate;
@@ -133,7 +146,7 @@ ASTNode *expression() {
     } else if (consume_tok("lambda")) {
       debug_log("lambda is parsed!");
       /* read formals */
-      expect_lbr();
+      EXPECT_LBR()
       ASTNode *node = new_ast_node(ND_LAMBDA, cur);
       ASTNode *last_arg = NULL;
       debug_log("lambda formals are parsed!");
@@ -144,7 +157,7 @@ ASTNode *expression() {
         else
           last_arg = last_arg->next = new_ast_node(ND_IDENT, prev);
       }
-      expect_rbr();
+      EXPECT_RBR()
       /* read <body> -> <definition>* <expression>+ */
       debug_log("lambda body is parsed!");
       ASTNode *last_body = NULL;
@@ -185,13 +198,14 @@ ASTNode *expression() {
 
 ASTNode *definition() {
   debug_log("definition is parsed");
-  expect_lbr();
+  EXPECT_LBR()
   if (consume_tok("define")) {
     if (consume(TOKEN_IDENT)) {
       ASTNode *node = new_ast_node(ND_DEFINE, prev);
       node->caller = new_ast_node(ND_IDENT, prev);
       node->args = expression();
-      expect_rbr();
+      RETURN_IF_ERROR()
+      EXPECT_RBR()
       return node;
     }
   }
