@@ -1,3 +1,15 @@
+filegroup(
+    name = "tools",
+    srcs = glob(
+        [
+            "*.c",
+            "*.h",
+        ],
+        exclude = ["main.c"],
+    ),
+    visibility = ["//test:__pkg__"],
+)
+
 cc_binary(
     name = "shirp",
     srcs = [
