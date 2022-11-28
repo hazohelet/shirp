@@ -81,6 +81,7 @@ static bool consume(TokenKind kind) {
 ASTNode *command_or_definition();
 ASTNode *command();
 ASTNode *definition();
+ASTNode *body();
 ASTNode *expression();
 
 ASTNode *program() { return command_or_definition(); }
@@ -158,36 +159,7 @@ ASTNode *expression() {
           last_arg = last_arg->next = new_ast_node(ND_IDENT, prev);
       }
       EXPECT_RBR()
-      /* read <body> -> <definition>* <expression>+ */
-      debug_log("lambda body is parsed!");
-      ASTNode *last_body = NULL;
-      dump_tokens(cur);
-      if (!is_definition_start()) {
-        debug_log("no defs");
-      } else {
-        debug_log("theres defs");
-      }
-      while (is_definition_start()) {
-        debug_log("lambda definitions are parsed!");
-        if (!node->caller)
-          node->caller = last_body = definition();
-        else
-          last_body = last_body->next = definition();
-      }
-      /* <expression> */
-      debug_log("lambda body-expression is parsed");
-      if (!node->caller)
-        node->caller = last_body = expression();
-      else
-        last_body = last_body->next = expression();
-
-      /* <expression>* */
-      while (!consume_rbr()) {
-        if (!node->caller)
-          node->caller = last_body = expression();
-        else
-          last_body = last_body->next = expression();
-      }
+      node->caller = body();
       debug_log("lambda has been parsed");
       return node;
     }
@@ -211,4 +183,41 @@ ASTNode *definition() {
   }
   tok_error_at(cur, "expected identifier");
   return NULL;
+}
+
+/* <body> -> <definition>* <expression>+ */
+ASTNode *body() {
+  debug_log("body is parsed!");
+  ASTNode *res = NULL;
+  ASTNode *last_body = NULL;
+  dump_tokens(cur);
+  /* <definition *> */
+  if (!is_definition_start()) {
+    debug_log("NO define observed");
+  } else {
+    debug_log("THERE is define observed");
+  }
+  while (is_definition_start()) {
+    debug_log("body-definitions are parsed!");
+    if (!res)
+      res = last_body = definition();
+    else
+      last_body = last_body->next = definition();
+  }
+  /* <expression> */
+  debug_log("body-expression is parsed");
+  if (!res)
+    res = last_body = expression();
+  else
+    last_body = last_body->next = expression();
+
+  /* <expression>* */
+  while (!consume_rbr()) {
+    if (!res)
+      res = last_body = expression();
+    else
+      last_body = last_body->next = expression();
+  }
+  debug_log("lambda has been parsed");
+  return res;
 }
