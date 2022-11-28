@@ -61,11 +61,10 @@ Obj *copy_value_obj(Obj *obj) {
   return new_obj;
 }
 
-void convert_to_float(Obj *obj) {
-  if (obj->typ == INT_TY) {
-    obj->typ = FLOAT_TY;
-    obj->num_val.float_val = (double)obj->num_val.int_val;
-  }
+double get_float_val(Obj *obj) {
+  if (obj->typ == INT_TY)
+    return (double)obj->num_val.int_val;
+  return obj->num_val.float_val;
 }
 
 void Obj_add_operation(Obj *dst, Obj *op1, Obj *op2) {
@@ -73,10 +72,10 @@ void Obj_add_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = INT_TY;
     dst->num_val.int_val = op1->num_val.int_val + op2->num_val.int_val;
   } else {
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    convert_to_float(op1);
-    convert_to_float(op2);
-    dst->num_val.float_val = op1->num_val.float_val + op2->num_val.float_val;
+    dst->num_val.float_val = op1_val + op2_val;
   }
 }
 
@@ -85,10 +84,10 @@ void Obj_sub_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = INT_TY;
     dst->num_val.int_val = op1->num_val.int_val - op2->num_val.int_val;
   } else {
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    convert_to_float(op1);
-    convert_to_float(op2);
-    dst->num_val.float_val = op1->num_val.float_val - op2->num_val.float_val;
+    dst->num_val.float_val = op1_val - op2_val;
   }
 }
 
@@ -97,10 +96,10 @@ void Obj_mul_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = INT_TY;
     dst->num_val.int_val = op1->num_val.int_val * op2->num_val.int_val;
   } else {
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    convert_to_float(op1);
-    convert_to_float(op2);
-    dst->num_val.float_val = op1->num_val.float_val * op2->num_val.float_val;
+    dst->num_val.float_val = op1_val * op2_val;
   }
 }
 
@@ -109,10 +108,10 @@ void Obj_div_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = INT_TY;
     dst->num_val.int_val = op1->num_val.int_val / op2->num_val.int_val;
   } else {
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    convert_to_float(op1);
-    convert_to_float(op2);
-    dst->num_val.float_val = op1->num_val.float_val / op2->num_val.float_val;
+    dst->num_val.float_val = op1_val / op2_val;
   }
 }
 
@@ -121,11 +120,10 @@ void Obj_mod_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = INT_TY;
     dst->num_val.int_val = op1->num_val.int_val % op2->num_val.int_val;
   } else {
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    convert_to_float(op1);
-    convert_to_float(op2);
-    dst->num_val.float_val =
-        fmod(op1->num_val.float_val, op2->num_val.float_val);
+    dst->num_val.float_val = fmod(op1_val, op2_val);
   }
 }
 
@@ -134,10 +132,10 @@ void Obj_lt_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = BOOL_TY;
     dst->num_val.bool_val = op1->num_val.int_val < op2->num_val.int_val;
   } else {
-    convert_to_float(op1);
-    convert_to_float(op2);
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1->num_val.float_val < op2->num_val.float_val;
+    dst->num_val.bool_val = op1_val < op2_val;
   }
 }
 
@@ -146,10 +144,10 @@ void Obj_eq_operation(Obj *dst, Obj *op1, Obj *op2) {
     dst->typ = BOOL_TY;
     dst->num_val.bool_val = op1->num_val.int_val == op2->num_val.int_val;
   } else {
-    convert_to_float(op1);
-    convert_to_float(op2);
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
     dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1->num_val.float_val == op2->num_val.float_val;
+    dst->num_val.bool_val = op1_val == op2_val;
   }
 }
 
@@ -216,7 +214,10 @@ Obj *handle_proc_call(ASTNode *node) {
     Obj *result = new_int_obj(0);
     ASTNode *arg = node->args;
     while (arg) {
-      Obj_add_operation(result, result, eval_ast(arg));
+      Obj *op2 = eval_ast(arg);
+      if (eval_error)
+        return NULL;
+      Obj_add_operation(result, result, op2);
       arg = arg->next;
     }
     return result;
@@ -225,7 +226,10 @@ Obj *handle_proc_call(ASTNode *node) {
     Obj *result = copy_value_obj(eval_ast(node->args));
     ASTNode *arg = node->args->next;
     while (arg) {
-      Obj_sub_operation(result, result, eval_ast(arg));
+      Obj *op2 = eval_ast(arg);
+      if (eval_error)
+        return NULL;
+      Obj_sub_operation(result, result, op2);
       arg = arg->next;
     }
     return result;
@@ -234,7 +238,10 @@ Obj *handle_proc_call(ASTNode *node) {
     Obj *result = copy_value_obj(eval_ast(node->args));
     ASTNode *arg = node->args->next;
     while (arg) {
-      Obj_mul_operation(result, result, eval_ast(arg));
+      Obj *op2 = eval_ast(arg);
+      if (eval_error)
+        return NULL;
+      Obj_mul_operation(result, result, op2);
       arg = arg->next;
     }
     return result;
@@ -251,6 +258,8 @@ Obj *handle_proc_call(ASTNode *node) {
       return false_obj;
     Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
     Obj *op2 = eval_ast(node->args->next);              // this is op2
+    if (eval_error)
+      return NULL;
     Obj_lt_operation(result, result, op2);
     return result;
   } else if (match_tok(node->tok, "div")) {
@@ -265,6 +274,8 @@ Obj *handle_proc_call(ASTNode *node) {
     }
     Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
     Obj *op2 = eval_ast(node->args->next);              // this is op2
+    if (eval_error)
+      return NULL;
     Obj_div_operation(result, result, op2);
     return result;
   } else if (match_tok(node->tok, "remainder")) {
@@ -279,6 +290,8 @@ Obj *handle_proc_call(ASTNode *node) {
     }
     Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
     Obj *op2 = eval_ast(node->args->next);              // this is op2
+    if (eval_error)
+      return NULL;
     Obj_mod_operation(result, result, op2);
     return result;
   } else if (match_tok(node->tok, "=")) {
@@ -293,6 +306,8 @@ Obj *handle_proc_call(ASTNode *node) {
     }
     Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
     Obj *op2 = eval_ast(node->args->next);              // this is op2
+    if (eval_error)
+      return NULL;
     Obj_eq_operation(result, result, op2);
     return result;
   }
