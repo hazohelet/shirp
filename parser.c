@@ -13,6 +13,10 @@ void tok_error_at(Token *tok, char *fmt, ...) {
   syntax_error = true;
   va_list ap;
   va_start(ap, fmt);
+  if (!tok) {
+    verror_at(prev->loc, prev->len, fmt, ap);
+    return;
+  }
   verror_at(tok->loc, tok->len, fmt, ap);
 }
 
@@ -29,7 +33,7 @@ void read_next() {
 }
 
 static bool consume_lbr() {
-  if (cur->kind == TOKEN_DELIMITER && match_tok(cur, "(")) {
+  if (cur && cur->kind == TOKEN_DELIMITER && match_tok(cur, "(")) {
     read_next();
     return true;
   }
@@ -37,7 +41,7 @@ static bool consume_lbr() {
 }
 
 static bool consume_rbr() {
-  if (cur->kind == TOKEN_DELIMITER && match_tok(cur, ")")) {
+  if (cur && cur->kind == TOKEN_DELIMITER && match_tok(cur, ")")) {
     read_next();
     return true;
   }
@@ -83,6 +87,7 @@ ASTNode *command();
 ASTNode *definition();
 ASTNode *body();
 ASTNode *expression();
+ASTNode *identifier();
 
 ASTNode *program() { return command_or_definition(); }
 
@@ -162,6 +167,33 @@ ASTNode *expression() {
       node->caller = body();
       debug_log("lambda has been parsed");
       return node;
+    } else if (consume_tok("let")) {
+      /* ( let ( `(<identifier> <expression>)`* ) <body> )*/
+      debug_log("let is parsed!");
+      EXPECT_LBR()
+      ASTNode *proccall = new_ast_node(ND_PROCCALL, cur);
+      ASTNode *lambda = new_ast_node(ND_LAMBDA, cur);
+      proccall->caller = lambda;
+      ASTNode *last_param = NULL;
+      ASTNode *last_arg = NULL;
+      while (consume_lbr()) {
+        debug_log("<binding spec> parsed");
+        ASTNode *ident = identifier();
+        ASTNode *expr = expression();
+        EXPECT_RBR();
+        if (!proccall->args) {
+          lambda->args = last_param = ident;
+          proccall->args = last_arg = expr;
+        } else {
+          last_param = last_param->next = ident;
+          last_arg = last_arg->next = expr;
+        }
+      }
+      EXPECT_RBR()
+      lambda->caller = body();
+      EXPECT_RBR()
+      debug_log("let has been parsed");
+      return proccall;
     }
   }
   tok_error_at(cur, "unexpected token");
@@ -212,12 +244,21 @@ ASTNode *body() {
     last_body = last_body->next = expression();
 
   /* <expression>* */
-  while (!consume_rbr()) {
+  while (!match_tok(cur, ")")) {
     if (!res)
       res = last_body = expression();
     else
       last_body = last_body->next = expression();
   }
-  debug_log("lambda has been parsed");
+  debug_log("body has been parsed");
   return res;
+}
+
+ASTNode *identifier() {
+  if (consume(TOKEN_IDENT)) {
+    debug_log("Identifier parsed: %.*s", prev->len, prev->loc);
+    return new_ast_node(ND_IDENT, prev);
+  }
+  tok_error_at(cur, "expected identifier");
+  return NULL;
 }

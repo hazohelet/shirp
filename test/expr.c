@@ -78,12 +78,10 @@ int main() {
   test_int("((h 9) 9)", 909);
   eval_str("(define i (lambda (x) (if (< x a) a x)))");
   test_int("(i (f 100))", 101);
-  /*
   test_int("(let ((a 1)) (i 10))", 100);
   test_int("(let ((a 10) (b (f a)) (c (- b 1))) (let ((a 10) (b (f a)) (c (- b "
            "1))) (+ (+ a b) c)))",
            121);
-  */
   test_int("a", 100);
   /*
   eval_str("(define l (cons 1 (cons 2 (cons 3 (list)))))");
