@@ -40,6 +40,18 @@ bool assert_int(Obj *tested, int64_t expected) {
   return true;
 }
 
+bool assert_float(Obj *tested, double expected) {
+  if (tested->typ != FLOAT_TY) {
+    failure = true;
+    return false;
+  }
+  if (tested->num_val.float_val != expected) {
+    failure = true;
+    return false;
+  }
+  return true;
+}
+
 void test_int(char *str, int64_t expected) {
   Obj *val = eval_str(str);
   bool success = assert_int(val, expected);
@@ -53,6 +65,19 @@ void test_int(char *str, int64_t expected) {
         str, val->num_val.int_val, expected);
 }
 
+void test_float(char *str, double expected) {
+  Obj *val = eval_str(str);
+  bool success = assert_float(val, expected);
+  if (success)
+    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%f`\n", str,
+            expected);
+  else
+    fprintf(
+        stderr,
+        "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%lf`, not = `%lf`\n",
+        str, val->num_val.float_val, expected);
+}
+
 void finalize() {
   if (failure) {
     fprintf(stderr, "\x1b[1m\x1b[31mTEST FAILED\x1b[0m\n");
@@ -60,10 +85,15 @@ void finalize() {
   }
   fprintf(stderr, "\x1b[1m\x1b[32mTEST SUCCESS\x1b[0m\n");
 }
+
 int main() {
   env = push_new_frame(NULL);
   test_int("42", 42);
   test_int("(+ 1 2)", 3);
+  test_float("(+ 4.2 0)", 4.2);
+  test_float("(+ 4.2 2.2)", 6.4);
+  test_float("(+ 4 2.2)", 6.2);
+  test_float("(+ 4.4 2)", 6.4);
   test_int("(+ (- (* (* 1 2) 3) (* 4 5)) (+ (* 6 7) (* 8 9)))", 100);
   eval_str("(define a 100)");
   test_int("a", 100);
