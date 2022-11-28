@@ -1,6 +1,6 @@
 #include "shirp.h"
 
-#define READLINE_BUFSIZE 1024
+#define READLINE_BUFSIZE 32
 
 extern Token *cur;
 extern bool lexical_error;
@@ -28,8 +28,8 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
     (*pos)++;
 
     if (*pos > *bufsize) {
-      *bufsize += READLINE_BUFSIZE;
-      buffer = (char *)realloc(buffer, *bufsize);
+      *bufsize *= 2;
+      buffer = (char *)shirp_realloc(buffer, *bufsize);
       if (!buffer) {
         fprintf(stderr, "shirp: allocation error");
         exit(EXIT_FAILURE);
