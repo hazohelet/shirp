@@ -1,9 +1,11 @@
 #ifndef __SHIRP_H__
 #define __SHIRP_H__
 
+#define __STDC_FORMAT_MACROS
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <math.h>
 #include <signal.h>
 #include <stdarg.h>

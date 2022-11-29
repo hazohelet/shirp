@@ -4,4 +4,7 @@ cc_binary(
         "expr.c",
         "//:tools",
     ],
+    copts = [
+        "--undefine-macro DEBUG",
+    ],
 )

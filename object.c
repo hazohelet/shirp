@@ -12,7 +12,7 @@ void print_obj(Obj *obj) {
     fprintf(stderr, "%s\n", obj->num_val.bool_val ? "#t" : "#f");
     break;
   case INT_TY:
-    fprintf(stderr, "%ld\n", obj->num_val.int_val);
+    fprintf(stderr, "%" PRId64 "\n", obj->num_val.int_val);
     break;
   case FLOAT_TY:
     fprintf(stderr, "%lf\n", obj->num_val.float_val);

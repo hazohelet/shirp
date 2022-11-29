@@ -56,13 +56,13 @@ void test_int(char *str, int64_t expected) {
   Obj *val = eval_str(str);
   bool success = assert_int(val, expected);
   if (success)
-    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%ld`\n", str,
-            expected);
+    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%" PRId64 "`\n",
+            str, expected);
   else
-    fprintf(
-        stderr,
-        "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%ld`, not = `%ld`\n",
-        str, val->num_val.int_val, expected);
+    fprintf(stderr,
+            "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%" PRId64
+            "`, not = `%" PRId64 "`\n",
+            str, val->num_val.int_val, expected);
 }
 
 void test_float(char *str, double expected) {

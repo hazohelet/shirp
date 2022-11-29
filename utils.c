@@ -105,7 +105,7 @@ void dump_tokens(Token *tokens) {
     if (tok && tok->kind == TOKEN_NUMBER) {
       Obj *obj = tok->obj;
       if (obj->typ == INT_TY)
-        fprintf(stderr, "`%.*s`[I'%ld]-> ", (int)tok->len, tok->loc,
+        fprintf(stderr, "`%.*s`[I'%" PRId64 "]-> ", (int)tok->len, tok->loc,
                 obj->num_val.int_val);
       else
         fprintf(stderr, "`%.*s`[F'%lf]-> ", (int)tok->len, tok->loc,
