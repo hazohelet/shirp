@@ -127,7 +127,7 @@ void dump_hashtable(HashTable *ht) {
     Entry *entry = ht->buckets[i];
     if (entry && entry != TOMBSTONE) {
       fprintf(stderr, "`%.*s`: ", (int)entry->keylen, entry->key);
-      print_obj(entry->val);
+      println_obj(entry->val);
     }
   }
   fprintf(stderr, "-----------------\n");

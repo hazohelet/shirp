@@ -6,5 +6,8 @@ cc_binary(
     ],
     copts = [
         "--undefine-macro DEBUG",
+        "-Wall",
+        "-Wextra",
+        "-Wconversion",
     ],
 )

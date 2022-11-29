@@ -5,6 +5,7 @@ extern bool lexical_error;
 extern bool syntax_error;
 extern bool eval_error;
 extern Token *cur;
+extern Obj *nillist;
 bool failure = false;
 
 Obj *eval_str(char *str) {
@@ -78,6 +79,50 @@ void test_float(char *str, double expected) {
         str, val->num_val.float_val, expected);
 }
 
+void test_list_int(char *str, int64_t expected[], size_t size) {
+  Obj *list = eval_str(str);
+  if (!is_list(list)) {
+    fprintf(stderr,
+            "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` does not evaluate to list\n",
+            str);
+    failure = true;
+    return;
+  }
+  size_t argc = 0;
+  Obj *cell = list;
+  while (cell && cell != nillist) {
+    argc++;
+    cell = cell->cdr;
+  }
+  if (size != argc) {
+    fprintf(stderr,
+            "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to list of size "
+            "`%ld`, not `%ld`\n",
+            str, argc, size);
+    failure = true;
+    return;
+  }
+  for (size_t idx = 1; idx <= size; idx++) {
+    Obj *car = list->car;
+    if (!assert_int(car, expected[idx - 1])) {
+      fprintf(stderr,
+              "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to list with "
+              "%ldth element `%" PRId64 "`, not = `%" PRId64 "`\n",
+              str, idx, car->num_val.int_val, expected[idx - 1]);
+      failure = true;
+      return;
+    }
+    list = list->cdr;
+  }
+  fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == (", str);
+  for (size_t i = 0; i < size; i++) {
+    fprintf(stderr, "%" PRId64, expected[i]);
+    if (i != size - 1)
+      fprintf(stderr, " ");
+  }
+  fprintf(stderr, ")\n");
+}
+
 void finalize() {
   if (failure) {
     fprintf(stderr, "\x1b[1m\x1b[31mTEST FAILED\x1b[0m\n");
@@ -118,11 +163,10 @@ int main() {
            "1))) (+ (+ a b) c)))",
            121);
   test_int("a", 100);
-  /*
   eval_and_print("(define l (cons 1 (cons 2 (cons 3 (list)))))");
-  test_list("l", {1, 2, 3});
-  test_int("(car (cdr l)", 2);
-   */
+  int64_t expected[] = {1, 2, 3};
+  test_list_int("l", expected, 3);
+  test_int("(car (cdr l))", 2);
   eval_and_print(
       "(define fact (lambda (n) (if (< n 1) 1 (* n (fact (- n 1))))))");
   test_int("(fact 10)", 3628800);

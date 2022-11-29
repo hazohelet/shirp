@@ -85,7 +85,7 @@ int main() {
     }
     dump_env(env);
     if (res)
-      print_obj(res);
+      println_obj(res);
     else
       debug_log("nil");
 

@@ -51,8 +51,7 @@ typedef enum {
   CHAR_TY,
   STRING_TY,
   LAMBDA_TY,
-  LIST_TY,
-  QUOTE_TY
+  CONS_TY,
 } ObjType;
 
 struct Obj {
@@ -128,7 +127,8 @@ Frame *copied_environment(Frame *frame);
 
 /* Evaluation Trees */
 Obj *eval_ast(ASTNode *node);
-void print_obj(Obj *obj);
+void println_obj(Obj *obj);
+bool is_list(Obj *obj);
 
 /* util.c: Utility functions especially for debugging*/
 void *shirp_malloc(size_t size);

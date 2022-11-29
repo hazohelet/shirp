@@ -134,7 +134,7 @@ void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
     if (entry) {
       debug_printf("Key found! %.*s: ", keylen, key);
 #ifdef DEBUG
-      print_obj(entry->val);
+      println_obj(entry->val);
 #endif
       return entry->val;
     }
