@@ -77,6 +77,10 @@ int main() {
       free(line);
       continue;
     }
+    if (cur) {
+      tok_error_at(cur, "fatal: still tokens left");
+      continue;
+    }
     debug_log("/* Parsing finished */\n");
     Obj *res = eval_ast(ast);
     // dump_hashtable(env->table);

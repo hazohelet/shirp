@@ -165,6 +165,7 @@ ASTNode *expression() {
       }
       EXPECT_RBR()
       node->caller = body();
+      EXPECT_RBR()
       debug_log("lambda has been parsed");
       return node;
     } else if (consume_tok("let")) {
