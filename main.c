@@ -23,11 +23,10 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
       printf("\n");
       exit(-1);
     } else {
-      buffer[*pos] = c;
+      buffer[(*pos)++] = c;
     }
-    (*pos)++;
 
-    if (*pos > *bufsize) {
+    if (*pos >= *bufsize) {
       *bufsize *= 2;
       buffer = (char *)shirp_realloc(buffer, *bufsize);
       if (!buffer) {
