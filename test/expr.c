@@ -86,6 +86,11 @@ void finalize() {
   fprintf(stderr, "\x1b[1m\x1b[32mTEST SUCCESS\x1b[0m\n");
 }
 
+void eval_and_print(char *str) {
+  fprintf(stderr, "\x1b[33mRUNNING\x1b[0m: `%s`\n", str);
+  eval_str(str);
+}
+
 int main() {
   env = push_new_frame(NULL);
   test_int("42", 42);
@@ -95,18 +100,18 @@ int main() {
   test_float("(+ 4 2.2)", 6.2);
   test_float("(+ 4.4 2)", 6.4);
   test_int("(+ (- (* (* 1 2) 3) (* 4 5)) (+ (* 6 7) (* 8 9)))", 100);
-  eval_str("(define a 100)");
+  eval_and_print("(define a 100)");
   test_int("a", 100);
-  eval_str("(define b (+ 10 1))");
+  eval_and_print("(define b (+ 10 1))");
   test_int("b", 11);
   test_int("(if (< a b) 10 20)", 20);
-  eval_str("(define f (lambda (x) (+ x 1)))");
+  eval_and_print("(define f (lambda (x) (+ x 1)))");
   test_int("(f 10)", 11);
-  eval_str("(define g (lambda (x y) (+ x y)))");
+  eval_and_print("(define g (lambda (x y) (+ x y)))");
   test_int("(g 3 5)", 8);
-  eval_str("(define h (lambda (x) (lambda (y) (+ x (* a y)))))");
+  eval_and_print("(define h (lambda (x) (lambda (y) (+ x (* a y)))))");
   test_int("((h 9) 9)", 909);
-  eval_str("(define i (lambda (x) (if (< x a) a x)))");
+  eval_and_print("(define i (lambda (x) (if (< x a) a x)))");
   test_int("(i (f 100))", 101);
   test_int("(let ((a 1)) (i 10))", 100);
   test_int("(let ((a 10) (b (f a)) (c (- b 1))) (let ((a 10) (b (f a)) (c (- b "
@@ -114,12 +119,19 @@ int main() {
            121);
   test_int("a", 100);
   /*
-  eval_str("(define l (cons 1 (cons 2 (cons 3 (list)))))");
+  eval_and_print("(define l (cons 1 (cons 2 (cons 3 (list)))))");
   test_list("l", {1, 2, 3});
   test_int("(car (cdr l)", 2);
    */
-  eval_str("(define fact (lambda (n) (if (< n 1) 1 (* n (fact (- n 1))))))");
+  eval_and_print(
+      "(define fact (lambda (n) (if (< n 1) 1 (* n (fact (- n 1))))))");
   test_int("(fact 10)", 3628800);
+  eval_and_print(
+      "(define gcd (lambda (a b) (if (= b 0) a (gcd b (remainder a b)))))");
+  test_int("(gcd 9801 1287)", 99);
+  /* TODO: impl Garbage Collection
+  test_int("(gcd 1287 9801)", 99);
+  */
 
   finalize();
   return 0;
