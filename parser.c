@@ -21,7 +21,7 @@ void tok_error_at(Token *tok, char *fmt, ...) {
 }
 
 static ASTNode *new_ast_node(NodeKind kind, Token *tok) {
-  ASTNode *node = (ASTNode *)shirp_malloc(sizeof(ASTNode));
+  ASTNode *node = (ASTNode *)shirp_calloc(1, sizeof(ASTNode));
   node->kind = kind;
   node->tok = tok;
   return node;
