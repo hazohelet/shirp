@@ -74,8 +74,10 @@ void expect_rbr() {
   expect_rbr();                                                                \
   RETURN_IF_ERROR()
 
+static bool match_tokenkind(TokenKind kind) { return cur && cur->kind == kind; }
+
 static bool consume(TokenKind kind) {
-  if (cur->kind == kind) {
+  if (match_tokenkind(kind)) {
     read_next();
     return true;
   }
@@ -212,6 +214,35 @@ ASTNode *definition() {
       RETURN_IF_ERROR()
       EXPECT_RBR()
       return node;
+    } else if (consume_lbr()) {
+      /* (define (<identifier> <def formals>) <body>) */
+      debug_log("(define (<identifier> <def formals>) <body>)");
+      ASTNode *name = identifier();
+      ASTNode *def = new_ast_node(ND_DEFINE, prev);
+      ASTNode *lambda = new_ast_node(ND_LAMBDA, prev);
+      debug_log("def lambda name is %.*s", name->tok->len, name->tok->loc);
+      def->caller = name;
+      def->args = lambda;
+      /* <def formals>) <body>) */
+      /* <def formals> -> <identifier>* | <identifier>* . <identifier> */
+      ASTNode *last_arg = NULL;
+
+      while (match_tokenkind(TOKEN_IDENT)) {
+        if (!lambda->args)
+          lambda->args = last_arg = identifier();
+        else
+          last_arg = last_arg->next = identifier();
+      }
+
+      ASTNode *listarg = NULL;
+      if (consume(TOKEN_PERIOD)) {
+        listarg = identifier();
+      }
+      lambda->listarg = listarg;
+      EXPECT_RBR()
+      lambda->caller = body();
+      EXPECT_RBR()
+      return def;
     }
   }
   tok_error_at(cur, "expected identifier");

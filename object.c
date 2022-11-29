@@ -173,6 +173,18 @@ void Obj_lt_operation(Obj *dst, Obj *op1, Obj *op2) {
   }
 }
 
+void Obj_le_operation(Obj *dst, Obj *op1, Obj *op2) {
+  if (op1->typ == INT_TY && op2->typ == INT_TY) {
+    dst->typ = BOOL_TY;
+    dst->num_val.bool_val = op1->num_val.int_val <= op2->num_val.int_val;
+  } else {
+    double op1_val = get_float_val(op1);
+    double op2_val = get_float_val(op2);
+    dst->typ = BOOL_TY;
+    dst->num_val.bool_val = op1_val <= op2_val;
+  }
+}
+
 void Obj_eq_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = BOOL_TY;
@@ -289,6 +301,22 @@ Obj *handle_proc_call(ASTNode *node) {
     Obj *op2 = eval_ast(node->args->next);              // this is op2
     RETURN_IF_ERROR()
     Obj_lt_operation(result, result, op2);
+    return result;
+  } else if (match_tok(node->tok, "<=")) {
+    debug_log("<= Handled!");
+    size_t argc = get_argc(node->args);
+    if (argc < 2) {
+      tok_error_at(node->tok,
+                   "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(node->args));
+      eval_error = true;
+      return NULL;
+    } else if (argc > 2)
+      return false_obj;
+    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
+    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    RETURN_IF_ERROR()
+    Obj_le_operation(result, result, op2);
     return result;
   } else if (match_tok(node->tok, "div")) {
     debug_log("`div` Handled!");

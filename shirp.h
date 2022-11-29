@@ -88,6 +88,8 @@ struct ASTNode {
   ASTNode
       *caller;   // procedure calls caller expression, or it holds lambda bodies
   ASTNode *args; // procedure calls hold arguments
+  ASTNode
+      *listarg;  // lambda holds list args with <formal> without () or with `.`
   ASTNode *next; // if this is an argument, next is needed
 };
 
