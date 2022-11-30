@@ -144,13 +144,14 @@ void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
   return NULL;
 }
 
-void copy_frame(Frame *dst, Frame *src) {
+Frame *copy_frame(Frame *dst, Frame *src) {
   for (size_t i = 0; i < src->table->capacity; i++) {
     Entry *entry = src->table->buckets[i];
     if (entry == NULL || entry == TOMBSTONE)
       continue;
     frame_insert_obj(dst, entry->key, entry->keylen, entry->val);
   }
+  return dst;
 }
 
 void copy_environment_recursive(Frame *dst, Frame *src) {

@@ -378,3 +378,54 @@ ASTNode *simple_datum() {
   tok_error_at(cur, "unexpected token in datum");
   return NULL;
 }
+
+void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
+  if (!node)
+    return;
+  switch (node->kind) {
+  case ND_LAMBDA:;
+    ASTNode *body = node->caller;
+    while (body && body->next) {
+      mark_tail_calls(body, false);
+      body = body->next;
+    }
+    mark_tail_calls(body, true);
+    dump_tokens(body->tok);
+    return;
+  case ND_PROCCALL:
+    node->is_tail_call = is_in_tail_context;
+    if (is_in_tail_context) {
+      debug_log("tail call detected: %.*s", node->tok->len, node->tok->loc);
+    }
+    mark_tail_calls(node->caller, false);
+    ASTNode *arg = node->args;
+    while (arg) {
+      mark_tail_calls(arg, false);
+      arg = arg->next;
+    }
+    return;
+  case ND_QUOTE:;
+    ASTNode *item = node->args;
+    while (item) {
+      mark_tail_calls(item, false);
+      item = item->next;
+    }
+    return;
+  case ND_IF:;
+    ASTNode *test = node->args;
+    ASTNode *consequent = test->next;
+    ASTNode *alternate = consequent->next;
+    mark_tail_calls(test, false);
+    mark_tail_calls(consequent, is_in_tail_context);
+    mark_tail_calls(alternate, is_in_tail_context);
+    return;
+  case ND_DEFINE:;
+    mark_tail_calls(node->args, false);
+    return;
+  case ND_IDENT:
+  case ND_NUMBER:
+  case ND_STRING:
+  case ND_SYMBOL:
+    return;
+  }
+}

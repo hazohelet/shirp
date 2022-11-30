@@ -97,6 +97,8 @@ int main() {
       continue;
     }
     debug_log("/* Parsing finished */\n");
+    mark_tail_calls(ast, false);
+    debug_log("/* Tail calls are marked */\n");
     Obj *res = eval_ast(ast);
     // dump_hashtable(env->table);
     if (eval_error) {

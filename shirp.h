@@ -90,13 +90,13 @@ typedef enum {
 
 struct ASTNode {
   NodeKind kind;
-  Token *tok; // representative token
-  ASTNode
-      *caller;   // procedure calls caller expression, or it holds lambda bodies
-  ASTNode *args; // procedure calls hold arguments
+  Token *tok;      // representative token
+  ASTNode *caller; // procedure calls caller expression; lambda hold its body
+  ASTNode *args; // procedure calls hold arguments; lambda holds its parameters
   ASTNode
       *listarg;  // lambda holds list args with <formal> without () or with `.`
   ASTNode *next; // if this is an argument, next is needed
+  bool is_tail_call; // for proper tail call optimization
 };
 
 ASTNode *program();
@@ -106,6 +106,7 @@ char *get_command(ASTNode *node);
 void free_ast(ASTNode *node);
 void free_tokens(Token *tok);
 void evaluate_ast(ASTNode *ast, bool make_childprocess);
+void mark_tail_calls(ASTNode *node, bool is_in_tail_context);
 
 /* Environment related */
 typedef struct {
@@ -131,6 +132,7 @@ Frame *push_new_frame(Frame *outer);
 Frame *pop_frame(Frame *frame);
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val);
 void *frame_get_obj(Frame *frame, char *key, size_t keylen);
+Frame *copy_frame(Frame *dst, Frame *src);
 Frame *copied_environment(Frame *frame);
 
 /* Evaluation Trees */

@@ -221,7 +221,8 @@ size_t get_argc(ASTNode *args) {
 }
 
 /* repr_tok is for printing error info */
-Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
+Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
+                         bool is_tail_call) {
   debug_log("calling user procedure: `%.*s`", repr_tok->len, repr_tok->loc);
   if (proc->typ != LAMBDA_TY) {
     tok_error_at(repr_tok, "not a procedure");
@@ -237,16 +238,24 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
     return NULL;
   }
 
-  /* copied because the pointer of the saved environment needs to point other
-   * frames, especially in recursive calls */
-  Frame *exec_env =
-      copied_environment(proc->saved_env); // retrieve the saved environment
-  exec_env = push_frame(exec_env, env);    // push frame on the stack
+  Frame *exec_env;
+  if (is_tail_call) {
+    /* tail call optimization */
+    exec_env = copy_frame(env, proc->saved_env);
+  } else {
+
+    /* copied because the pointer of the saved environment needs to point other
+     * frames, especially in recursive calls */
+    exec_env =
+        copied_environment(proc->saved_env); // retrieve the saved environment
+    exec_env = push_frame(exec_env, env);    // push frame on the stack
+  }
 
   ASTNode *proc_arg = proc->lambda_ast->args;
   /* set up arguments to new frame */
+  Frame *arg_frame = push_new_frame(NULL);
   while (proc_arg) {
-    frame_insert_obj(exec_env, proc_arg->tok->loc, proc_arg->tok->len,
+    frame_insert_obj(arg_frame, proc_arg->tok->loc, proc_arg->tok->len,
                      eval_ast(args));
     RETURN_IF_ERROR()
     proc_arg = proc_arg->next;
@@ -254,7 +263,8 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
   }
   /* Environment has to come here because procedure arguments values shall be
    * evaluated in the previous environment */
-  env = exec_env;
+  env = copy_frame(exec_env, arg_frame);
+  pop_frame(arg_frame);
 
   Obj *res = NULL;
   ASTNode *body = proc->lambda_ast->caller;
@@ -262,7 +272,8 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args) {
     res = eval_ast(body);
     body = body->next;
   }
-  env = pop_frame(env); // pop the execution environment
+  if (!is_tail_call)
+    env = pop_frame(env); // pop the execution environment
   return res;
 }
 
@@ -450,7 +461,10 @@ Obj *handle_proc_call(ASTNode *node) {
   Obj *caller = eval_ast(node->caller);
   if (!caller)
     return NULL;
-  return call_user_procedure(node->tok, caller, node->args);
+  if (node->is_tail_call)
+    return call_user_procedure(node->tok, caller, node->args, true);
+  else
+    return call_user_procedure(node->tok, caller, node->args, false);
 }
 
 static bool is_not_false(Obj *obj) {
