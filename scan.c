@@ -1,6 +1,5 @@
 #include "shirp.h"
 
-int brackets_left = 0;
 bool lexical_error = false;
 
 extern Obj *true_obj;
@@ -111,6 +110,7 @@ Token *handle_sharp(char *c, char **cref) {
   last_tok(Token *): the last toekn that has been scanned
 */
 Token *tokenize(char *input, Token *last_tok) {
+  static size_t brackets_left = 0;
   char *c = input;
   while (*c) {
     if (isspace(*c) || *c == '\n' || *c == '\r')
@@ -156,7 +156,8 @@ Token *tokenize(char *input, Token *last_tok) {
           }
           c++;
         }
-        last_tok = last_tok->next = new_token(TOKEN_DELIMITER, start, c++);
+        last_tok = last_tok->next = new_token(TOKEN_IDENT, start, c);
+        c++;
         continue;
       }
       continue;

@@ -6,33 +6,49 @@ extern Token *cur;
 extern bool lexical_error;
 extern bool syntax_error;
 extern bool eval_error;
-extern int brackets_left;
 Frame *env;
 
-char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize) {
+char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
+                     size_t *brackets_left) {
   char c;
+  bool commenting = false;
+  bool in_string = false;
+  bool in_vbars = false;
 
   while (1) {
     int raw_c = getchar();
     c = (char)raw_c;
 
-    if (c == '\n') {
-      buffer[*pos] = '\0';
-      return buffer;
-    } else if (raw_c == EOF) {
-      printf("\n");
-      exit(-1);
-    } else {
-      buffer[(*pos)++] = c;
-    }
-
-    if (*pos >= *bufsize) {
+    if (*pos >= *bufsize - 1) {
       *bufsize *= 2;
       buffer = (char *)shirp_realloc(buffer, *bufsize);
       if (!buffer) {
         fprintf(stderr, "shirp: allocation error");
         exit(EXIT_FAILURE);
       }
+    }
+
+    if (c == '\n') {
+      buffer[(*pos)++] = '\n';
+      buffer[*pos] = '\0';
+      return buffer;
+    } else if (raw_c == EOF) {
+      printf("\n");
+      exit(-1);
+    } else {
+      if (!commenting && !in_string && !in_vbars) {
+        if (c == '(')
+          (*brackets_left)++;
+        else if (c == ')')
+          (*brackets_left)--;
+      }
+      if (c == ';')
+        commenting = true;
+      else if (c == '"')
+        in_string = !in_string;
+      else if (c == '|')
+        in_vbars = !in_vbars;
+      buffer[(*pos)++] = c;
     }
   }
 }
@@ -47,23 +63,22 @@ int main() {
     size_t bufsize = READLINE_BUFSIZE;
     size_t pos = 0;
     char *line = (char *)shirp_malloc(bufsize * sizeof(char));
-    line = shirp_readline(line, &pos, &bufsize);
+    size_t brackets_left = 0;
+    do {
+      if (brackets_left > 0)
+        fprintf(stderr, ".. ");
+      line = shirp_readline(line, &pos, &bufsize, &brackets_left);
+    } while (brackets_left > 0);
 
-    brackets_left = 0;
     lexical_error = false;
     syntax_error = false;
     eval_error = false;
     Token head = {};
-    Token *tail = tokenize(line, &head);
+    tokenize(line, &head);
+    dump_tokens(head.next);
     if (lexical_error) {
       free(line);
       continue;
-    }
-    while (brackets_left > 0 && !lexical_error) {
-      fprintf(stderr, ".. ");
-      size_t tmp_pos = pos;
-      line = shirp_readline(line, &pos, &bufsize);
-      tail = tokenize(line + tmp_pos, tail);
     }
     if (!head.next || lexical_error) {
       free(line);
