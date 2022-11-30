@@ -9,7 +9,7 @@ extern bool eval_error;
 Frame *env;
 
 char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
-                     size_t *brackets_left) {
+                     int *brackets_left) {
   char c;
   bool commenting = false;
   bool in_string = false;
@@ -63,7 +63,7 @@ int main() {
     size_t bufsize = READLINE_BUFSIZE;
     size_t pos = 0;
     char *line = (char *)shirp_malloc(bufsize * sizeof(char));
-    size_t brackets_left = 0;
+    int brackets_left = 0;
     do {
       if (brackets_left > 0)
         fprintf(stderr, ".. ");
