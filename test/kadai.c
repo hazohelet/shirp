@@ -46,6 +46,15 @@ int main() {
   eval_and_print("(define (fib2 n) (fib-tail 0 1 n))");
   test_int("(fib2 44)", 701408733);
 
+  println("S9");
+  eval_and_print("(define (f1 lst) (car (car (cdr (cdr lst)))))");
+  eval_and_print("(define (f2 lst) (car (car lst)))");
+  eval_and_print("(define (f3 lst) (car (cdr (car (cdr (car (cdr (car (cdr "
+                 "(car (cdr (car (cdr lst)))))))))))))");
+  test_int("(f1 '(1 2 (3 4) 5))", 3);
+  test_int("(f2 '((3)))", 3);
+  test_int("(f3 '(1 (2 (4 (5 (6 (7 3)))))))", 3);
+
   test_finalize();
   return 0;
 }
