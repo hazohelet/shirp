@@ -46,6 +46,27 @@ int main() {
   eval_and_print("(define (fib2 n) (fib-tail 0 1 n))");
   test_int("(fib2 44)", 701408733);
 
+  println("S7");
+  eval_and_print("(define (abs n) (if (< n 0) (- 0 n) n))");
+  eval_and_print(
+      "(define (deriv f dx) (lambda (x) (/ (- (f (+ x dx)) (f x)) dx)))");
+  eval_and_print("(define (sqrt-base x) (lambda (t) (- (square t) x)))");
+  eval_and_print(
+      "(define (good-enough? g guess) (< (abs (g guess)) 0.0000001))");
+  eval_and_print(
+      "(define (improve g d guess) (- guess (/ (g guess) (d guess))))");
+  eval_and_print(
+      "(define (newton-iter2 g guess) (define d (deriv g 0.0001)) (if "
+      "(good-enough? g guess) guess (newton-iter2 g (improve g d guess))))");
+  eval_and_print("(define (square x) (* x x))");
+  test_float("((deriv square 0.0001) 3)", 6.000100000012054);
+  eval_and_print("(define (sqrt3 x) (newton-iter2 (sqrt-base x) 1.0))");
+  test_float("(sqrt3 2)", 1.4142135624530596);
+
+  println("S8");
+  eval_and_print("(define (compose f g) (lambda (x) (g (f x))))");
+  test_int("((compose (lambda (x) (+ x 1)) (lambda (x) (* x x))) 2)", 9);
+
   println("S9");
   eval_and_print("(define (f1 lst) (car (car (cdr (cdr lst)))))");
   eval_and_print("(define (f2 lst) (car (car lst)))");

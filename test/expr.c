@@ -32,7 +32,7 @@ int main() {
   test_list_int("l", expected, 3);
   test_int("(car (cdr l))", 2);
   eval_and_print(
-      "(define fact (lambda (n) (if (< n 1) 1 (* n (fact (- n 1))))))");
+      "(define fact (lambda (n) (if (< n 1) 1 (* (fact (- n 1)) n))))");
   test_int("(fact 10)", 3628800);
   eval_and_print(
       "(define gcd (lambda (a b) (if (= b 0) a (gcd b (remainder a b)))))");
