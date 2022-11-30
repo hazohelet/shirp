@@ -159,6 +159,18 @@ Token *tokenize(char *input, Token *last_tok) {
         last_tok = last_tok->next = new_token(TOKEN_IDENT, start, c);
         c++;
         continue;
+      } else if (*c == '"') {
+        char *start = ++c;
+        while (*c != '"') {
+          if (*c == '\0') {
+            error_at(start - 1, 1, "unterminated '\"'");
+            return last_tok;
+          }
+          c++;
+        }
+        last_tok = last_tok->next = new_token(TOKEN_STRING, start, c);
+        c++;
+        continue;
       }
       continue;
     }

@@ -102,6 +102,13 @@ Obj *copy_value_obj(Obj *obj) {
   return new_obj;
 }
 
+Obj *new_string_obj(char *str, size_t len) {
+  Obj *obj = new_obj(STRING_TY);
+  obj->str_val = str;
+  obj->str_len = len;
+  return obj;
+}
+
 double get_float_val(Obj *obj) {
   if (obj->typ == INT_TY)
     return (double)obj->num_val.int_val;
@@ -325,7 +332,7 @@ Obj *handle_proc_call(ASTNode *node) {
     RETURN_IF_ERROR()
     Obj_le_operation(result, result, op2);
     return result;
-  } else if (match_tok(node->tok, "div")) {
+  } else if (match_tok(node->tok, "div") || match_tok(node->tok, "/")) {
     debug_log("`div` Handled!");
     size_t argc = get_argc(node->args);
     if (argc != 2) {
@@ -528,6 +535,8 @@ Obj *eval_ast(ASTNode *node) {
     }
   case ND_NUMBER:
     return node->tok->obj;
+  case ND_STRING:
+    return new_string_obj(node->tok->loc, node->tok->len);
   case ND_QUOTE:
     return eval_quote(node);
   case ND_SYMBOL:

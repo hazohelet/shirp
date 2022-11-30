@@ -9,6 +9,15 @@ bool syntax_error = false;
   if (syntax_error)                                                            \
     return NULL;
 
+void read_next() {
+  if (!cur) {
+    prev = cur;
+    return;
+  }
+  prev = cur;
+  cur = cur->next;
+}
+
 void tok_error_at(Token *tok, char *fmt, ...) {
   syntax_error = true;
   va_list ap;
@@ -18,6 +27,7 @@ void tok_error_at(Token *tok, char *fmt, ...) {
     return;
   }
   verror_at(tok->loc, tok->len, fmt, ap);
+  read_next();
 }
 
 static ASTNode *new_ast_node(NodeKind kind, Token *tok) {
@@ -25,15 +35,6 @@ static ASTNode *new_ast_node(NodeKind kind, Token *tok) {
   node->kind = kind;
   node->tok = tok;
   return node;
-}
-
-void read_next() {
-  if (!cur) {
-    prev = cur;
-    return;
-  }
-  prev = cur;
-  cur = cur->next;
 }
 
 static bool consume_lbr() {
@@ -96,6 +97,7 @@ ASTNode *datum();
 ASTNode *expression();
 ASTNode *identifier();
 ASTNode *number();
+ASTNode *string();
 
 ASTNode *program() { return command_or_definition(); }
 
@@ -122,6 +124,8 @@ ASTNode *expression() {
     return identifier();
   } else if (match_tokenkind(TOKEN_NUMBER)) {
     return number();
+  } else if (match_tokenkind(TOKEN_STRING)) {
+    return string();
   } else if (consume(TOKEN_QUOTE)) {
     return datum();
   } else if (consume_lbr()) {
@@ -135,12 +139,12 @@ ASTNode *expression() {
       debug_log("Proc Call parsed!: %.*s", cur->len, cur->loc);
       ASTNode *node = new_ast_node(ND_PROCCALL, cur);
       node->caller = expression();
-      if (!node->caller)
-        return NULL;
+      RETURN_IF_ERROR()
       node->args = NULL;
       ASTNode *last_arg = NULL;
       while (cur && !match_tok(cur, ")")) {
         ASTNode *arg = expression();
+        RETURN_IF_ERROR()
         if (!node->args)
           node->args = last_arg = arg;
         else
@@ -211,7 +215,7 @@ ASTNode *expression() {
       return proccall;
     }
   }
-  tok_error_at(cur, "unexpected token");
+  tok_error_at(cur, "unexpected token in expression");
   return NULL;
 }
 
@@ -316,6 +320,15 @@ ASTNode *number() {
   return NULL;
 }
 
+ASTNode *string() {
+  if (consume(TOKEN_STRING)) {
+    debug_log("String parsed: %.*s", prev->len, prev->loc);
+    return new_ast_node(ND_STRING, prev);
+  }
+  tok_error_at(cur, "expected string");
+  return NULL;
+}
+
 ASTNode *list();
 ASTNode *simple_datum();
 
@@ -359,7 +372,9 @@ ASTNode *simple_datum() {
     debug_log("quoted datum is symbol");
     read_next();
     return new_ast_node(ND_SYMBOL, prev);
+  } else if (match_tokenkind(TOKEN_STRING)) {
+    return string();
   }
   tok_error_at(cur, "unexpected token in datum");
-  return 0;
+  return NULL;
 }

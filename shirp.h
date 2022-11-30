@@ -79,6 +79,7 @@ Obj *new_obj(ObjType typ);
 typedef enum {
   ND_IDENT,
   ND_NUMBER,
+  ND_STRING,
   ND_QUOTE,
   ND_SYMBOL,
   ND_IF,
