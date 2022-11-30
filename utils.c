@@ -4,8 +4,6 @@
 #define PROMPT_OFFSET 3
 
 void *shirp_malloc(size_t size) {
-  static size_t total = 0;
-  debug_log("malloc %ld", ++total);
   void *ptr = malloc(size);
   if (!ptr) {
     fprintf(stderr, "shirp: allocation error");
@@ -15,8 +13,6 @@ void *shirp_malloc(size_t size) {
 }
 
 void *shirp_calloc(size_t n, size_t size) {
-  static size_t total = 0;
-  debug_log("calloc %ld", ++total);
   void *ptr = calloc(n, size);
   if (!ptr) {
     fprintf(stderr, "shirp: allocation error");
@@ -35,11 +31,8 @@ void *shirp_realloc(void *ptr, size_t size) {
 }
 
 void shirp_free(void *ptr) {
-  if (ptr) {
-    static size_t total = 0;
-    debug_log("free %ld", ++total);
+  if (ptr)
     free(ptr);
-  }
 }
 
 // reports error with its position
@@ -171,8 +164,7 @@ void free_ast(ASTNode *ast) {
 void free_obj(Obj *obj) {
   if (!obj)
     return;
-  shirp_free(obj->str_val);
-  pop_frame(obj->saved_env);
-  free_ast(obj->lambda_ast);
+  if (obj->saved_env)
+    pop_frame(obj->saved_env);
   shirp_free(obj);
 }

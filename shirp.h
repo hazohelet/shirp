@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define TOMBSTONE ((void *)-1)
+
 typedef enum {
   TOKEN_IDENT,
   TOKEN_IMMEDIATE,
@@ -42,6 +44,8 @@ typedef struct Token Token;
 typedef struct Frame Frame;
 typedef struct ASTNode ASTNode;
 typedef struct Obj Obj;
+typedef struct WorkList WorkList;
+typedef struct GC GC;
 
 struct Token {
   TokenKind kind; // token kind
@@ -142,6 +146,7 @@ Frame *copied_environment(Frame *frame);
 
 /* Evaluation Trees */
 Obj *eval_ast(ASTNode *node);
+void print_obj(Obj *obj);
 void println_obj(Obj *obj);
 bool is_list(Obj *obj);
 
@@ -161,5 +166,24 @@ void dump_env(Frame *env);
 
 void free_ast(ASTNode *ast);
 void free_obj(Obj *obj);
+
+/* Garbage Collector */
+
+struct WorkList {
+  Obj *obj;
+  bool is_marked;
+  WorkList *next;
+};
+
+struct GC {
+  WorkList *head;
+  WorkList *tail;
+  size_t size;
+};
+
+void GC_init();
+void GC_collect();
+void GC_mark_and_sweep();
+void GC_dump();
 
 #endif

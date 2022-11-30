@@ -1,5 +1,7 @@
 #include "testtools.h"
 
+extern GC *gc;
+
 int main() {
   test_init();
   test_int("42", 42);
@@ -41,9 +43,7 @@ int main() {
   eval_and_print(
       "(define gcd (lambda (a b) (if (= b 0) a (gcd b (remainder a b)))))");
   test_int("(gcd 9801 1287)", 99);
-  /* TODO: impl Garbage Collection
   test_int("(gcd 1287 9801)", 99);
-  */
 
   test_finalize();
   return 0;

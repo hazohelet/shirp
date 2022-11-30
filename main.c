@@ -53,7 +53,10 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
   }
 }
 
-void shirp_init() { env = push_new_frame(NULL); }
+void shirp_init() {
+  env = push_new_frame(NULL);
+  GC_init();
+}
 
 int main() {
   shirp_init();
@@ -116,6 +119,7 @@ int main() {
       free_ast(ast);
       shirp_free(line);
     }
+    GC_mark_and_sweep();
   } while (1);
 
   return 0;

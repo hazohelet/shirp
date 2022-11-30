@@ -12,15 +12,10 @@ filegroup(
 
 cc_binary(
     name = "shirp",
-    srcs = [
-        "environment.c",
-        "main.c",
-        "object.c",
-        "parser.c",
-        "scan.c",
-        "shirp.h",
-        "utils.c",
-    ],
+    srcs = glob([
+        "*.c",
+        "*.h",
+    ]),
     copts = [
         "-Wall",
         "-Wextra",
@@ -31,15 +26,10 @@ cc_binary(
 
 cc_binary(
     name = "shirp_debug",
-    srcs = [
-        "environment.c",
-        "main.c",
-        "object.c",
-        "parser.c",
-        "scan.c",
-        "shirp.h",
-        "utils.c",
-    ],
+    srcs = glob([
+        "*.c",
+        "*.h",
+    ]),
     copts = [
         "-Wall",
         "-Wextra",

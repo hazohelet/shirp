@@ -80,6 +80,7 @@ void println_obj(Obj *obj) {
 Obj *new_obj(ObjType typ) {
   Obj *obj = (Obj *)shirp_calloc(1, sizeof(Obj));
   obj->typ = typ;
+  GC_collect(obj);
   return obj;
 }
 
@@ -96,10 +97,9 @@ Obj *new_float_obj(double val) {
 }
 
 Obj *copy_value_obj(Obj *obj) {
-  Obj *new_obj = (Obj *)shirp_calloc(1, sizeof(Obj));
-  new_obj->typ = obj->typ;
-  new_obj->num_val = obj->num_val;
-  return new_obj;
+  Obj *copied = new_obj(obj->typ);
+  copied->num_val = obj->num_val;
+  return copied;
 }
 
 Obj *new_string_obj(char *str, size_t len) {
