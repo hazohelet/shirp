@@ -168,6 +168,11 @@ Token *tokenize(char *input, Token *last_tok) {
     if (ident_len > 0) {
       switch (tok_kind) {
       case 0:
+        if (ident_len == 1 && *c == '.') {
+          last_tok = last_tok->next = new_token(TOKEN_PERIOD, c, c + 1);
+          c++;
+          break;
+        }
         last_tok = last_tok->next = new_token(TOKEN_IDENT, c, c + ident_len);
         c += ident_len;
         break;

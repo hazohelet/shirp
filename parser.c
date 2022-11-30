@@ -92,7 +92,7 @@ ASTNode *command_or_definition();
 ASTNode *command();
 ASTNode *definition();
 ASTNode *body();
-ASTNode *quoted_datum();
+ASTNode *datum();
 ASTNode *expression();
 ASTNode *identifier();
 ASTNode *number();
@@ -123,12 +123,12 @@ ASTNode *expression() {
   } else if (match_tokenkind(TOKEN_NUMBER)) {
     return number();
   } else if (consume(TOKEN_QUOTE)) {
-    return quoted_datum();
+    return datum();
   } else if (consume_lbr()) {
     if (cur->kind != TOKEN_KEYWORD) {
       if (match_tok(cur, "quote")) {
         read_next();
-        ASTNode *quotes = quoted_datum();
+        ASTNode *quotes = datum();
         EXPECT_RBR()
         return quotes;
       }
@@ -316,30 +316,50 @@ ASTNode *number() {
   return NULL;
 }
 
-ASTNode *quoted_datum() {
-  debug_log("quotation parsed");
-  if (consume_lbr()) {
-    ASTNode *node = new_ast_node(ND_QUOTE, prev);
-    ASTNode *last_datum = NULL;
-    while (!match_tok(cur, ")")) {
-      if (!node->args)
-        node->args = last_datum = quoted_datum();
-      else
-        last_datum = last_datum->next = quoted_datum();
-    }
-    EXPECT_RBR()
-    return node;
+ASTNode *list();
+ASTNode *simple_datum();
+
+ASTNode *datum() {
+  debug_log("datum is parsed");
+  if (match_tok(cur, "(")) {
+    return list();
+  }
+  return simple_datum();
+}
+
+ASTNode *list() {
+  debug_log("datum_list is parsed");
+  EXPECT_LBR()
+  ASTNode *lst = new_ast_node(ND_QUOTE, cur);
+  ASTNode *last = NULL;
+  while (!match_tok(cur, ")") && !match_tokenkind(TOKEN_PERIOD)) {
+    if (!lst->args)
+      lst->args = last = datum();
+    else
+      last = last->next = datum();
+  }
+  if (!match_tok(prev, "(") && consume(TOKEN_PERIOD)) {
+    debug_log("datum_list is a cons cell");
+    ASTNode *dotted = datum();
+    lst->listarg = dotted;
+  }
+  EXPECT_RBR()
+  return lst;
+}
+
+ASTNode *simple_datum() {
+  debug_log("simple datum parsed");
+  if (!cur) {
+    tok_error_at(cur, "unterminated quote");
+    return NULL;
   }
   if (match_tokenkind(TOKEN_NUMBER)) {
     return number();
-  } else {
+  } else if (match_tokenkind(TOKEN_IDENT) || match_tokenkind(TOKEN_KEYWORD)) {
     debug_log("quoted datum is symbol");
-    if (!cur) {
-      tok_error_at(cur, "unterminated quote");
-      return NULL;
-    }
     read_next();
-    debug_log("Quoted datum parsed: %.*s", prev->len, prev->loc);
     return new_ast_node(ND_SYMBOL, prev);
   }
+  tok_error_at(cur, "unexpected token in datum");
+  return 0;
 }

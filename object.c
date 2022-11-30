@@ -462,31 +462,15 @@ Obj *eval_if(ASTNode *node) {
   return eval_ast(alternate);
 }
 
-Obj *eval_quote(ASTNode *node);
-
-Obj *eval_quoted_val(ASTNode *node) {
-  if (node->kind == ND_NUMBER) {
-    return eval_ast(node);
-  } else if (node->kind == ND_SYMBOL) {
-    Obj *res = new_obj(SYMBOL_TY);
-    res->str_val = node->tok->loc;
-    res->str_len = node->tok->len;
-    return res;
-  } else if (node->kind == ND_QUOTE) {
-    return eval_quote(node);
-  }
-  tok_error_at(node->tok, "invalid quoted value");
-  return NULL;
-}
-
 Obj *eval_quote(ASTNode *node) {
   debug_log("quote evaled!");
+
   Obj *head = nillist;
   Obj *tail = nillist;
   ASTNode *arg = node->args;
   while (arg) {
     Obj *cell = new_obj(CONS_TY);
-    cell->car = eval_quoted_val(arg);
+    cell->car = eval_ast(arg);
     cell->cdr = nillist;
     RETURN_IF_ERROR()
     if (head == nillist) {
@@ -496,6 +480,9 @@ Obj *eval_quote(ASTNode *node) {
     }
     arg = arg->next;
   }
+  if (node->listarg)
+    tail->cdr = eval_ast(node->listarg);
+
   return head;
 }
 
