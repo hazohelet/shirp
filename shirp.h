@@ -23,6 +23,7 @@ typedef enum {
   TOKEN_DELIMITER,
   TOKEN_KEYWORD,
   TOKEN_PERIOD,
+  TOKEN_QUOTE,
 } TokenKind;
 
 typedef struct Token Token;
@@ -50,6 +51,7 @@ typedef enum {
   FLOAT_TY,
   CHAR_TY,
   STRING_TY,
+  SYMBOL_TY,
   LAMBDA_TY,
   CONS_TY,
 } ObjType;
@@ -62,8 +64,9 @@ struct Obj {
     int64_t int_val;
     double float_val;
   } num_val;
-  /* String Value */
+  /* String or Symbol Value */
   char *str_val;
+  size_t str_len;
   /* Lambda attributes */
   Frame *saved_env;
   ASTNode *lambda_ast;
@@ -76,6 +79,8 @@ Obj *new_obj(ObjType typ);
 typedef enum {
   ND_IDENT,
   ND_NUMBER,
+  ND_QUOTE,
+  ND_SYMBOL,
   ND_IF,
   ND_LAMBDA,
   ND_DEFINE,

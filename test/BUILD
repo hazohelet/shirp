@@ -29,3 +29,19 @@ cc_binary(
         "-Wconversion",
     ],
 )
+
+cc_binary(
+    name = "quote",
+    srcs = [
+        "quote.c",
+        "testtools.c",
+        "testtools.h",
+        "//:tools",
+    ],
+    copts = [
+        "--undefine-macro DEBUG",
+        "-Wall",
+        "-Wextra",
+        "-Wconversion",
+    ],
+)

@@ -125,6 +125,12 @@ Token *tokenize(char *input, Token *last_tok) {
       last_tok = last_tok->next = handle_sharp(++c, &c);
       continue;
     }
+    if (*c == '\'') {
+      debug_log("quote scanned");
+      last_tok = last_tok->next = new_token(TOKEN_QUOTE, c, c + 1);
+      c++;
+      continue;
+    }
 
     if (is_delimiter(*c)) {
       if (*c == '(') {

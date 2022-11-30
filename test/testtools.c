@@ -148,6 +148,30 @@ void test_bool(char *str, bool expected) {
             expected ? "#t" : "#f");
 }
 
+bool assert_symbol(Obj *tested, char *expected) {
+  if (tested->typ != SYMBOL_TY) {
+    failure = true;
+    return false;
+  }
+  if (strlen(expected) != tested->str_len ||
+      strncmp(tested->str_val, expected, tested->str_len) != 0) {
+    failure = true;
+    return false;
+  }
+  return true;
+}
+
+void test_symbol(char *str, char *expected) {
+  Obj *val = eval_str(str);
+  bool success = assert_symbol(val, expected);
+  if (success)
+    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str,
+            expected);
+  else
+    fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
+            expected);
+}
+
 void test_finalize() {
   if (failure) {
     fprintf(stderr, "\x1b[1m\x1b[31mTEST FAILED\x1b[0m\n");

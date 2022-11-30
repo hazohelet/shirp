@@ -28,6 +28,10 @@ static ASTNode *new_ast_node(NodeKind kind, Token *tok) {
 }
 
 void read_next() {
+  if (!cur) {
+    prev = cur;
+    return;
+  }
   prev = cur;
   cur = cur->next;
 }
@@ -88,8 +92,10 @@ ASTNode *command_or_definition();
 ASTNode *command();
 ASTNode *definition();
 ASTNode *body();
+ASTNode *quoted_datum();
 ASTNode *expression();
 ASTNode *identifier();
+ASTNode *number();
 
 ASTNode *program() { return command_or_definition(); }
 
@@ -112,14 +118,20 @@ ASTNode *command() { return expression(); }
 
 ASTNode *expression() {
   RETURN_IF_ERROR()
-  if (consume(TOKEN_IDENT)) {
-    debug_log("Identifier parsed: %.*s", prev->len, prev->loc);
-    return new_ast_node(ND_IDENT, prev);
-  } else if (consume(TOKEN_NUMBER)) {
-    debug_log("Number parsed: %.*s", prev->len, prev->loc);
-    return new_ast_node(ND_NUMBER, prev);
+  if (match_tokenkind(TOKEN_IDENT)) {
+    return identifier();
+  } else if (match_tokenkind(TOKEN_NUMBER)) {
+    return number();
+  } else if (consume(TOKEN_QUOTE)) {
+    return quoted_datum();
   } else if (consume_lbr()) {
     if (cur->kind != TOKEN_KEYWORD) {
+      if (match_tok(cur, "quote")) {
+        read_next();
+        ASTNode *quotes = quoted_datum();
+        EXPECT_RBR()
+        return quotes;
+      }
       debug_log("Proc Call parsed!: %.*s", cur->len, cur->loc);
       ASTNode *node = new_ast_node(ND_PROCCALL, cur);
       node->caller = expression();
@@ -293,4 +305,41 @@ ASTNode *identifier() {
   }
   tok_error_at(cur, "expected identifier");
   return NULL;
+}
+
+ASTNode *number() {
+  if (consume(TOKEN_NUMBER)) {
+    debug_log("Number parsed: %.*s", prev->len, prev->loc);
+    return new_ast_node(ND_NUMBER, prev);
+  }
+  tok_error_at(cur, "expected number");
+  return NULL;
+}
+
+ASTNode *quoted_datum() {
+  debug_log("quotation parsed");
+  if (consume_lbr()) {
+    ASTNode *node = new_ast_node(ND_QUOTE, prev);
+    ASTNode *last_datum = NULL;
+    while (!match_tok(cur, ")")) {
+      if (!node->args)
+        node->args = last_datum = quoted_datum();
+      else
+        last_datum = last_datum->next = quoted_datum();
+    }
+    EXPECT_RBR()
+    return node;
+  }
+  if (match_tokenkind(TOKEN_NUMBER)) {
+    return number();
+  } else {
+    debug_log("quoted datum is symbol");
+    if (!cur) {
+      tok_error_at(cur, "unterminated quote");
+      return NULL;
+    }
+    read_next();
+    debug_log("Quoted datum parsed: %.*s", prev->len, prev->loc);
+    return new_ast_node(ND_SYMBOL, prev);
+  }
 }

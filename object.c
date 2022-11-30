@@ -3,9 +3,9 @@
 extern Frame *env;
 bool eval_error = false;
 
-Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, NULL, NULL, NULL, NULL};
-Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, NULL, NULL, NULL, NULL};
-Obj *nillist = &(Obj){CONS_TY, {0}, NULL, NULL, NULL, NULL, NULL};
+Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, 0, NULL, NULL, NULL, NULL};
+Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, 0, NULL, NULL, NULL, NULL};
+Obj *nillist = &(Obj){CONS_TY, {0}, NULL, 0, NULL, NULL, NULL, NULL};
 
 #define RETURN_IF_ERROR()                                                      \
   if (eval_error)                                                              \
@@ -50,8 +50,15 @@ void print_obj(Obj *obj) {
     print_obj(obj);
     fprintf(stderr, ")");
     break;
-  default:
-    fprintf(stderr, "Eval Error");
+  case SYMBOL_TY:
+    fprintf(stderr, "%.*s", (int)obj->str_len, obj->str_val);
+    break;
+  case CHAR_TY:
+    fprintf(stderr, "#\\%.*s", (int)obj->str_len, obj->str_val);
+    break;
+  case STRING_TY:
+    fprintf(stderr, "\"%.*s\"", (int)obj->str_len, obj->str_val);
+    break;
   }
 }
 
@@ -455,6 +462,43 @@ Obj *eval_if(ASTNode *node) {
   return eval_ast(alternate);
 }
 
+Obj *eval_quote(ASTNode *node);
+
+Obj *eval_quoted_val(ASTNode *node) {
+  if (node->kind == ND_NUMBER) {
+    return eval_ast(node);
+  } else if (node->kind == ND_SYMBOL) {
+    Obj *res = new_obj(SYMBOL_TY);
+    res->str_val = node->tok->loc;
+    res->str_len = node->tok->len;
+    return res;
+  } else if (node->kind == ND_QUOTE) {
+    return eval_quote(node);
+  }
+  tok_error_at(node->tok, "invalid quoted value");
+  return NULL;
+}
+
+Obj *eval_quote(ASTNode *node) {
+  debug_log("quote evaled!");
+  Obj *head = nillist;
+  Obj *tail = nillist;
+  ASTNode *arg = node->args;
+  while (arg) {
+    Obj *cell = new_obj(CONS_TY);
+    cell->car = eval_quoted_val(arg);
+    cell->cdr = nillist;
+    RETURN_IF_ERROR()
+    if (head == nillist) {
+      head = tail = cell;
+    } else {
+      tail = tail->cdr = cell;
+    }
+    arg = arg->next;
+  }
+  return head;
+}
+
 void handle_definition(ASTNode *node) {
   debug_log("definition handled!");
   frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
@@ -466,6 +510,14 @@ Obj *handle_lambda(ASTNode *node) {
   Obj *obj = new_obj(LAMBDA_TY);
   obj->lambda_ast = node;
   obj->saved_env = copied_environment(env);
+  return obj;
+}
+
+Obj *eval_symbol(ASTNode *node) {
+  debug_log("symbol evaled!");
+  Obj *obj = new_obj(SYMBOL_TY);
+  obj->str_val = node->tok->loc;
+  obj->str_len = node->tok->len;
   return obj;
 }
 
@@ -489,6 +541,10 @@ Obj *eval_ast(ASTNode *node) {
     }
   case ND_NUMBER:
     return node->tok->obj;
+  case ND_QUOTE:
+    return eval_quote(node);
+  case ND_SYMBOL:
+    return eval_symbol(node);
   case ND_IF:
     return eval_if(node);
   case ND_PROCCALL:
