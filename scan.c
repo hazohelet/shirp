@@ -13,7 +13,8 @@ static void error_at(char *loc, size_t len, char *fmt, ...) {
 }
 
 static Token *new_token(TokenKind kind, char *start, char *end) {
-  Token *token = (Token *)shirp_malloc(sizeof(Token));
+  Token *token = (Token *)shirp_calloc(1, sizeof(Token));
+  token->typ = UNDEF_TY;
   token->kind = kind;
   token->loc = start;
   token->len = (size_t)(end - start);
@@ -95,11 +96,14 @@ Token *handle_sharp(char *c, char **cref) {
   }
   size_t len = (size_t)(c - head);
   /* TODO: impl other sharp features */
-  Token *tok = new_token(TOKEN_NUMBER, head, c);
-  if (match_str(*cref, "t", len) || match_str(*cref, "true", len))
-    tok->obj = true_obj;
-  else if (match_str(*cref, "f", len) || match_str(*cref, "false", len))
-    tok->obj = false_obj;
+  Token *tok = new_token(TOKEN_IMMEDIATE, head, c);
+  if (match_str(*cref, "t", len) || match_str(*cref, "true", len)) {
+    tok->typ = BOOL_TY;
+    tok->val.bool_val = true;
+  } else if (match_str(*cref, "f", len) || match_str(*cref, "false", len)) {
+    tok->typ = BOOL_TY;
+    tok->val.bool_val = false;
+  }
 
   *cref += len;
   return tok;
@@ -189,14 +193,16 @@ Token *tokenize(char *input, Token *last_tok) {
         c += ident_len;
         break;
       case 1:
-        last_tok = last_tok->next = new_token(TOKEN_NUMBER, c, c + ident_len);
-        last_tok->obj = new_obj(INT_TY);
-        last_tok->obj->num_val.int_val = strtol(c, &c, 10);
+        last_tok = last_tok->next =
+            new_token(TOKEN_IMMEDIATE, c, c + ident_len);
+        last_tok->typ = INT_TY;
+        last_tok->val.int_val = strtol(c, &c, 10);
         break;
       case 2:
-        last_tok = last_tok->next = new_token(TOKEN_NUMBER, c, c + ident_len);
-        last_tok->obj = new_obj(FLOAT_TY);
-        last_tok->obj->num_val.float_val = (double)strtold(c, &c);
+        last_tok = last_tok->next =
+            new_token(TOKEN_IMMEDIATE, c, c + ident_len);
+        last_tok->typ = FLOAT_TY;
+        last_tok->val.float_val = (double)strtold(c, &c);
         break;
       }
       if (is_keyword(last_tok)) {

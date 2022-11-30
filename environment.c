@@ -36,7 +36,7 @@ void hashtable_resize(HashTable *ht, size_t new_capacity) {
     }
     new_buckets[index] = entry;
   }
-  free(ht->buckets);
+  shirp_free(ht->buckets);
   ht->buckets = new_buckets;
   ht->capacity = new_capacity;
 }
@@ -96,11 +96,11 @@ Entry *hashtable_get(HashTable *ht, char *key, size_t keylen) {
 void free_table(HashTable *ht) {
   for (size_t i = 0; i < ht->capacity; i++) {
     if (ht->buckets[i] != NULL && ht->buckets[i] != TOMBSTONE) {
-      free(ht->buckets[i]);
+      shirp_free(ht->buckets[i]);
     }
   }
-  free(ht->buckets);
-  free(ht);
+  shirp_free(ht->buckets);
+  shirp_free(ht);
 }
 
 Frame *push_new_frame(Frame *outer) {
@@ -118,7 +118,7 @@ Frame *push_frame(Frame *frame, Frame *outer) {
 Frame *pop_frame(Frame *frame) {
   Frame *outer = frame->outer;
   free_table(frame->table);
-  free(frame);
+  shirp_free(frame);
   return outer;
 }
 

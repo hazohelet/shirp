@@ -529,6 +529,26 @@ Obj *eval_symbol(ASTNode *node) {
   return obj;
 }
 
+Obj *eval_immediate(Token *tok) {
+  debug_log("immediate evaled!");
+  Obj *obj = NULL;
+  switch (tok->typ) {
+  case INT_TY:
+    obj = new_obj(INT_TY);
+    obj->num_val.int_val = tok->val.int_val;
+    return obj;
+  case FLOAT_TY:;
+    obj = new_obj(FLOAT_TY);
+    obj->num_val.float_val = tok->val.float_val;
+    return obj;
+  case BOOL_TY:
+    return tok->val.bool_val ? true_obj : false_obj;
+  default:
+    tok_error_at(tok, "unknown immediate type");
+  }
+  return NULL;
+}
+
 Obj *eval_ast(ASTNode *node) {
   if (!node) {
     return new_obj(UNDEF_TY);
@@ -547,8 +567,8 @@ Obj *eval_ast(ASTNode *node) {
                    node->tok->loc);
       return NULL;
     }
-  case ND_NUMBER:
-    return node->tok->obj;
+  case ND_IMMEDIATE:
+    return eval_immediate(node->tok);
   case ND_STRING:
     return new_string_obj(node->tok->loc, node->tok->len);
   case ND_QUOTE:

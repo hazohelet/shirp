@@ -62,7 +62,7 @@ int main() {
 
     size_t bufsize = READLINE_BUFSIZE;
     size_t pos = 0;
-    char *line = (char *)shirp_malloc(bufsize * sizeof(char));
+    char *line = (char *)shirp_calloc(bufsize, sizeof(char));
     int brackets_left = 0;
     do {
       if (brackets_left > 0)
@@ -77,19 +77,20 @@ int main() {
     tokenize(line, &head);
     dump_tokens(head.next);
     if (lexical_error) {
-      free(line);
+      shirp_free(line);
       continue;
     }
     if (!head.next || lexical_error) {
-      free(line);
+      shirp_free(line);
       continue;
     }
     /* tokenization finished */
     cur = head.next;
     dump_tokens(cur);
+    bool has_side_effect = false;
     ASTNode *ast = program();
     if (syntax_error) {
-      free(line);
+      shirp_free(line);
       continue;
     }
     if (cur) {
@@ -99,6 +100,8 @@ int main() {
     debug_log("/* Parsing finished */\n");
     mark_tail_calls(ast, false);
     debug_log("/* Tail calls are marked */\n");
+    if (ast->kind == ND_DEFINE)
+      has_side_effect = true;
     Obj *res = eval_ast(ast);
     // dump_hashtable(env->table);
     if (eval_error) {
@@ -109,7 +112,10 @@ int main() {
       println_obj(res);
     else
       debug_log("nil");
-
+    if (!has_side_effect) {
+      free_ast(ast);
+      shirp_free(line);
+    }
   } while (1);
 
   return 0;

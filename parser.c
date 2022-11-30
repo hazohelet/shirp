@@ -122,7 +122,7 @@ ASTNode *expression() {
   RETURN_IF_ERROR()
   if (match_tokenkind(TOKEN_IDENT)) {
     return identifier();
-  } else if (match_tokenkind(TOKEN_NUMBER)) {
+  } else if (match_tokenkind(TOKEN_IMMEDIATE)) {
     return number();
   } else if (match_tokenkind(TOKEN_STRING)) {
     return string();
@@ -312,9 +312,9 @@ ASTNode *identifier() {
 }
 
 ASTNode *number() {
-  if (consume(TOKEN_NUMBER)) {
+  if (consume(TOKEN_IMMEDIATE)) {
     debug_log("Number parsed: %.*s", prev->len, prev->loc);
-    return new_ast_node(ND_NUMBER, prev);
+    return new_ast_node(ND_IMMEDIATE, prev);
   }
   tok_error_at(cur, "expected number");
   return NULL;
@@ -366,7 +366,7 @@ ASTNode *simple_datum() {
     tok_error_at(cur, "unterminated quote");
     return NULL;
   }
-  if (match_tokenkind(TOKEN_NUMBER)) {
+  if (match_tokenkind(TOKEN_IMMEDIATE)) {
     return number();
   } else if (match_tokenkind(TOKEN_IDENT) || match_tokenkind(TOKEN_KEYWORD)) {
     debug_log("quoted datum is symbol");
@@ -423,7 +423,7 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
     mark_tail_calls(node->args, false);
     return;
   case ND_IDENT:
-  case ND_NUMBER:
+  case ND_IMMEDIATE:
   case ND_STRING:
   case ND_SYMBOL:
     return;

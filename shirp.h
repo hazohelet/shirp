@@ -17,7 +17,7 @@
 
 typedef enum {
   TOKEN_IDENT,
-  TOKEN_NUMBER,
+  TOKEN_IMMEDIATE,
   TOKEN_STRING,
   TOKEN_RESERVED,
   TOKEN_DELIMITER,
@@ -25,24 +25,6 @@ typedef enum {
   TOKEN_PERIOD,
   TOKEN_QUOTE,
 } TokenKind;
-
-typedef struct Token Token;
-typedef struct Frame Frame;
-typedef struct ASTNode ASTNode;
-typedef struct Obj Obj;
-
-struct Token {
-  TokenKind kind; // token kind
-  char *loc;
-  size_t len;
-  Token *next;
-  Obj *obj; // value of the number tokens
-};
-
-Token *tokenize(char *input, Token *last_token);
-bool match_str(char *str, char *keyword, size_t len);
-bool match_tok(Token *tok, char *keyword);
-bool match_anyof_tok(Token *tok, char *keywords[]);
 
 typedef enum {
   UNDEF_TY,
@@ -55,6 +37,29 @@ typedef enum {
   LAMBDA_TY,
   CONS_TY,
 } ObjType;
+
+typedef struct Token Token;
+typedef struct Frame Frame;
+typedef struct ASTNode ASTNode;
+typedef struct Obj Obj;
+
+struct Token {
+  TokenKind kind; // token kind
+  ObjType typ;    // type of immediate
+  union {
+    bool bool_val;
+    int64_t int_val;
+    double float_val;
+  } val;
+  char *loc;   // holds reference to the source string
+  size_t len;  // length of the literal
+  Token *next; // next token
+};
+
+Token *tokenize(char *input, Token *last_token);
+bool match_str(char *str, char *keyword, size_t len);
+bool match_tok(Token *tok, char *keyword);
+bool match_anyof_tok(Token *tok, char *keywords[]);
 
 struct Obj {
   ObjType typ; // value type of object
@@ -78,7 +83,7 @@ Obj *new_obj(ObjType typ);
 
 typedef enum {
   ND_IDENT,
-  ND_NUMBER,
+  ND_IMMEDIATE,
   ND_STRING,
   ND_QUOTE,
   ND_SYMBOL,
@@ -144,6 +149,7 @@ bool is_list(Obj *obj);
 void *shirp_malloc(size_t size);
 void *shirp_calloc(size_t n, size_t size);
 void *shirp_realloc(void *ptr, size_t size);
+void shirp_free(void *ptr);
 void verror_at(char *loc, size_t size, char *fmt, va_list ap);
 void tok_error_at(Token *tok, char *fmt, ...);
 void debug_log(char *fmt, ...);
@@ -152,5 +158,8 @@ void debug_printf(char *fmt, ...);
 void dump_tokens(Token *tokens);
 void dump_hashtable(HashTable *ht);
 void dump_env(Frame *env);
+
+void free_ast(ASTNode *ast);
+void free_obj(Obj *obj);
 
 #endif

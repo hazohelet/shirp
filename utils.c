@@ -4,6 +4,8 @@
 #define PROMPT_OFFSET 3
 
 void *shirp_malloc(size_t size) {
+  static size_t total = 0;
+  debug_log("malloc %ld", ++total);
   void *ptr = malloc(size);
   if (!ptr) {
     fprintf(stderr, "shirp: allocation error");
@@ -13,6 +15,8 @@ void *shirp_malloc(size_t size) {
 }
 
 void *shirp_calloc(size_t n, size_t size) {
+  static size_t total = 0;
+  debug_log("calloc %ld", ++total);
   void *ptr = calloc(n, size);
   if (!ptr) {
     fprintf(stderr, "shirp: allocation error");
@@ -28,6 +32,14 @@ void *shirp_realloc(void *ptr, size_t size) {
     exit(EXIT_FAILURE);
   }
   return new_ptr;
+}
+
+void shirp_free(void *ptr) {
+  if (ptr) {
+    static size_t total = 0;
+    debug_log("free %ld", ++total);
+    free(ptr);
+  }
 }
 
 // reports error with its position
@@ -102,14 +114,16 @@ void dump_tokens(Token *tokens) {
   }
   Token *tok = tokens;
   do {
-    if (tok && tok->kind == TOKEN_NUMBER) {
-      Obj *obj = tok->obj;
-      if (obj->typ == INT_TY)
+    if (tok && tok->kind == TOKEN_IMMEDIATE) {
+      if (tok->typ == INT_TY)
         fprintf(stderr, "`%.*s`[I'%" PRId64 "]-> ", (int)tok->len, tok->loc,
-                obj->num_val.int_val);
-      else
+                tok->val.int_val);
+      else if (tok->typ == FLOAT_TY)
         fprintf(stderr, "`%.*s`[F'%lf]-> ", (int)tok->len, tok->loc,
-                obj->num_val.float_val);
+                tok->val.float_val);
+      else if (tok->typ == BOOL_TY)
+        fprintf(stderr, "`%.*s`[V'%s]-> ", (int)tok->len, tok->loc,
+                tok->val.bool_val ? "#t" : "#f");
     } else
       fprintf(stderr, "`%.*s` (%d)-> ", (int)tok->len, tok->loc, tok->kind);
     tok = tok->next;
@@ -142,4 +156,23 @@ void dump_env(Frame *env) {
     dump_hashtable(env->table);
     env = env->outer;
   }
+}
+
+void free_ast(ASTNode *ast) {
+  if (!ast)
+    return;
+  free_ast(ast->caller);
+  free_ast(ast->args);
+  free_ast(ast->listarg);
+  free_ast(ast->next);
+  shirp_free(ast);
+}
+
+void free_obj(Obj *obj) {
+  if (!obj)
+    return;
+  shirp_free(obj->str_val);
+  pop_frame(obj->saved_env);
+  free_ast(obj->lambda_ast);
+  shirp_free(obj);
 }

@@ -8,6 +8,10 @@ int main() {
   test_float("(+ 4.2 2.2)", 6.4);
   test_float("(+ 4 2.2)", 6.2);
   test_float("(+ 4.4 2)", 6.4);
+  test_bool("#f", false);
+  test_bool("#t", true);
+  test_bool("(< 4.4 2)", false);
+  test_bool("(<= 2 2)", true);
   test_int("(+ (- (* (* 1 2) 3) (* 4 5)) (+ (* 6 7) (* 8 9)))", 100);
   eval_and_print("(define a 100)");
   test_int("a", 100);
