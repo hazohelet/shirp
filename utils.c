@@ -30,11 +30,6 @@ void *shirp_realloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-void shirp_free(void *ptr) {
-  if (ptr)
-    free(ptr);
-}
-
 // reports error with its position
 void verror_at(char *loc, size_t len, char *fmt, va_list ap) {
   char *head = loc;
@@ -83,7 +78,7 @@ void debug_log(char *fmt, ...) {
 */
 
 bool match_str(char *str, char *keyword, size_t len) {
-  return strncmp(str, keyword, len) == 0;
+  return memcmp(str, keyword, len) == 0;
 }
 
 bool match_tok(Token *tok, char *keyword) {
@@ -151,6 +146,13 @@ void dump_env(Frame *env) {
   }
 }
 
+void free_tokens(Token *tok) {
+  if (!tok)
+    return;
+  free_tokens(tok->next);
+  free(tok);
+}
+
 void free_ast(ASTNode *ast) {
   if (!ast)
     return;
@@ -158,7 +160,7 @@ void free_ast(ASTNode *ast) {
   free_ast(ast->args);
   free_ast(ast->listarg);
   free_ast(ast->next);
-  shirp_free(ast);
+  free(ast);
 }
 
 void free_obj(Obj *obj) {
@@ -166,5 +168,5 @@ void free_obj(Obj *obj) {
     return;
   if (obj->saved_env)
     pop_frame(obj->saved_env);
-  shirp_free(obj);
+  free(obj);
 }
