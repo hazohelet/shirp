@@ -136,6 +136,10 @@ struct Frame {
   bool is_held;
 };
 
+HashTable *new_hash_table(size_t capacity);
+Entry *hashtable_get(HashTable *ht, char *key, size_t keylen);
+void hashtable_delete(HashTable *ht, char *key, size_t keylen);
+void hashtable_insert(HashTable *ht, char *key, size_t keylen, void *val);
 Frame *push_frame(Frame *frame, Frame *outer);
 Frame *push_new_frame(Frame *outer);
 Frame *pop_frame(Frame *frame);
@@ -154,7 +158,6 @@ bool is_list(Obj *obj);
 void *shirp_malloc(size_t size);
 void *shirp_calloc(size_t n, size_t size);
 void *shirp_realloc(void *ptr, size_t size);
-void shirp_free(void *ptr);
 void verror_at(char *loc, size_t size, char *fmt, va_list ap);
 void tok_error_at(Token *tok, char *fmt, ...);
 void debug_log(char *fmt, ...);
@@ -164,6 +167,7 @@ void dump_tokens(Token *tokens);
 void dump_hashtable(HashTable *ht);
 void dump_env(Frame *env);
 
+void free_tokens(Token *tok);
 void free_ast(ASTNode *ast);
 void free_obj(Obj *obj);
 
@@ -171,19 +175,22 @@ void free_obj(Obj *obj);
 
 struct WorkList {
   Obj *obj;
-  bool is_marked;
   WorkList *next;
 };
 
 struct GC {
   WorkList *head;
   WorkList *tail;
+  HashTable *marked_table;
   size_t size;
 };
 
 void GC_init();
-void GC_collect();
+void GC_collect(Obj *obj);
 void GC_mark_and_sweep();
 void GC_dump();
+void hashtable_insert_ptr(HashTable *ht, void *ptr, void *val);
+void *hashtable_get_ptr(HashTable *ht, void *ptr);
+void hashtable_delete_ptr(HashTable *ht, void *ptr);
 
 #endif

@@ -15,9 +15,9 @@ static uint32_t fnv_hash(char *str, size_t len) {
   return hash;
 }
 
-HashTable *new_hash_table() {
+HashTable *new_hash_table(size_t capacity) {
   HashTable *ht = (HashTable *)shirp_calloc(1, sizeof(HashTable));
-  ht->capacity = INITIAL_BUCKET_SIZE;
+  ht->capacity = capacity;
   ht->buckets = (Entry **)shirp_calloc(ht->capacity, sizeof(Entry *));
   return ht;
 }
@@ -36,7 +36,7 @@ void hashtable_resize(HashTable *ht, size_t new_capacity) {
     }
     new_buckets[index] = entry;
   }
-  shirp_free(ht->buckets);
+  free(ht->buckets);
   ht->buckets = new_buckets;
   ht->capacity = new_capacity;
 }
@@ -83,6 +83,8 @@ static size_t get_placeholder_index(HashTable *ht, char *key, size_t keylen) {
 
 void hashtable_delete(HashTable *ht, char *key, size_t keylen) {
   size_t index = get_placeholder_index(ht, key, keylen);
+  free(ht->buckets[index]->key);
+  free(ht->buckets[index]);
   ht->buckets[index] = TOMBSTONE;
 }
 
@@ -96,17 +98,17 @@ Entry *hashtable_get(HashTable *ht, char *key, size_t keylen) {
 void free_table(HashTable *ht) {
   for (size_t i = 0; i < ht->capacity; i++) {
     if (ht->buckets[i] != NULL && ht->buckets[i] != TOMBSTONE) {
-      shirp_free(ht->buckets[i]);
+      free(ht->buckets[i]);
     }
   }
-  shirp_free(ht->buckets);
-  shirp_free(ht);
+  free(ht->buckets);
+  free(ht);
 }
 
 Frame *push_new_frame(Frame *outer) {
   Frame *frame = (Frame *)shirp_malloc(sizeof(Frame));
   frame->outer = outer;
-  frame->table = new_hash_table();
+  frame->table = new_hash_table(INITIAL_BUCKET_SIZE);
   return frame;
 }
 
@@ -118,7 +120,7 @@ Frame *push_frame(Frame *frame, Frame *outer) {
 Frame *pop_frame(Frame *frame) {
   Frame *outer = frame->outer;
   free_table(frame->table);
-  shirp_free(frame);
+  free(frame);
   return outer;
 }
 

@@ -80,11 +80,12 @@ int main() {
     tokenize(line, &head);
     dump_tokens(head.next);
     if (lexical_error) {
-      shirp_free(line);
+      free(line);
+      free_tokens(head.next);
       continue;
     }
     if (!head.next || lexical_error) {
-      shirp_free(line);
+      free(line);
       continue;
     }
     /* tokenization finished */
@@ -93,7 +94,9 @@ int main() {
     bool has_side_effect = false;
     ASTNode *ast = program();
     if (syntax_error) {
-      shirp_free(line);
+      free(line);
+      free_tokens(head.next);
+      free_ast(ast);
       continue;
     }
     if (cur) {
@@ -106,8 +109,11 @@ int main() {
     if (ast->kind == ND_DEFINE)
       has_side_effect = true;
     Obj *res = eval_ast(ast);
-    // dump_hashtable(env->table);
     if (eval_error) {
+      free(line);
+      free_tokens(head.next);
+      free_ast(ast);
+      free_obj(res);
       continue;
     }
     dump_env(env);
@@ -116,9 +122,11 @@ int main() {
     else
       debug_log("nil");
     if (!has_side_effect) {
+      free(line);
+      free_tokens(head.next);
       free_ast(ast);
-      shirp_free(line);
     }
+    debug_log("gc");
     GC_mark_and_sweep();
   } while (1);
 
