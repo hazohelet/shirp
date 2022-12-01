@@ -6,6 +6,7 @@ extern Token *cur;
 extern bool lexical_error;
 extern bool syntax_error;
 extern bool eval_error;
+extern Obj *builtin;
 Frame *env;
 
 char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
@@ -53,11 +54,38 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
   }
 }
 
+Obj *new_builtin(char *name) {
+  Obj *obj = new_obj(BUILTIN_TY);
+  obj->str_val = name;
+  obj->str_len = strlen(name);
+  return obj;
+}
+
+void register_builtin(char *name) {
+  Obj *obj = new_builtin(name);
+  frame_insert_obj(env, name, strlen(name), obj);
+}
+
 void shirp_init() {
   env = push_new_frame(NULL);
   GC_init();
+  register_builtin("+");
+  register_builtin("-");
+  register_builtin("*");
+  register_builtin("/");
+  register_builtin("=");
+  register_builtin("<");
+  register_builtin("<=");
+  register_builtin("div");
+  register_builtin("remainder");
+  register_builtin("car");
+  register_builtin("cdr");
+  register_builtin("null?");
+  register_builtin("list");
+  register_builtin("cons");
 }
 
+#ifndef TEST
 int main() {
   shirp_init();
   do {
@@ -132,3 +160,4 @@ int main() {
 
   return 0;
 }
+#endif

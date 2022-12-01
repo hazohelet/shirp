@@ -59,6 +59,9 @@ void print_obj(Obj *obj) {
   case STRING_TY:
     fprintf(stderr, "\"%.*s\"", (int)obj->str_len, obj->str_val);
     break;
+  case BUILTIN_TY:
+    fprintf(stderr, "#<builtin-closure>");
+    break;
   }
 }
 
@@ -84,6 +87,8 @@ Obj *new_obj(ObjType typ) {
   return obj;
 }
 
+Obj *bool_obj(bool val) { return val ? true_obj : false_obj; }
+
 Obj *new_int_obj(int64_t val) {
   Obj *obj = new_obj(INT_TY);
   obj->num_val.int_val = val;
@@ -98,7 +103,7 @@ Obj *new_float_obj(double val) {
 
 Obj *copy_value_obj(Obj *obj) {
   Obj *copied = new_obj(obj->typ);
-  copied->num_val = obj->num_val;
+  memcpy(copied, obj, sizeof(Obj));
   return copied;
 }
 
@@ -175,27 +180,23 @@ void Obj_mod_operation(Obj *dst, Obj *op1, Obj *op2) {
   }
 }
 
-void Obj_lt_operation(Obj *dst, Obj *op1, Obj *op2) {
+Obj *Obj_lt_operation(Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
-    dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1->num_val.int_val < op2->num_val.int_val;
+    return bool_obj(op1->num_val.int_val < op2->num_val.int_val);
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
-    dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1_val < op2_val;
+    return bool_obj(op1_val < op2_val);
   }
 }
 
-void Obj_le_operation(Obj *dst, Obj *op1, Obj *op2) {
+Obj *Obj_le_operation(Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
-    dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1->num_val.int_val <= op2->num_val.int_val;
+    return bool_obj(op1->num_val.int_val <= op2->num_val.int_val);
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
-    dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1_val <= op2_val;
+    return bool_obj(op1_val <= op2_val);
   }
 }
 
@@ -229,6 +230,10 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
     eval_error = true;
     return NULL;
   }
+  if (is_tail_call)
+    debug_log("TAIL CALL!!!!!!!");
+  else
+    debug_log("NOT a tail call");
   const size_t proc_argc = get_argc(proc->lambda_ast->args);
   const size_t passed_argc = get_argc(args);
   if (proc_argc != passed_argc) {
@@ -241,7 +246,8 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
   Frame *exec_env;
   if (is_tail_call) {
     /* tail call optimization */
-    exec_env = copy_frame(env, proc->saved_env);
+    // exec_env = copy_frame(env, proc->saved_env);
+    exec_env = env;
   } else {
 
     /* copied because the pointer of the saved environment needs to point other
@@ -277,11 +283,34 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
   return res;
 }
 
-Obj *handle_proc_call(ASTNode *node) {
-  if (match_tok(node->tok, "+")) {
+bool match_name(char *name, char *name2) { return strcmp(name, name2) == 0; }
+
+Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
+  if (match_name(name, "cons")) {
+    debug_log("<BUILTIN cons> evaled!");
+    size_t argc = get_argc(args);
+    if (argc != 2) {
+      tok_error_at(tok, "wrong number of arguments: expects 2, got %ld",
+                   get_argc(args));
+      eval_error = true;
+      return NULL;
+    }
+    Obj *res = new_obj(CONS_TY);
+    Obj *op1 = eval_ast(args);
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    res->car = op1;
+    res->cdr = op2;
+    return res;
+  } else if (match_name(name, "null?")) {
+    debug_log("<BUILTIN null?> evaled!");
+    Obj *val = eval_ast(args);
+    RETURN_IF_ERROR()
+    return bool_obj(val == nillist);
+  } else if (match_name(name, "+")) {
     debug_log("+ Handled!");
     Obj *result = new_int_obj(0);
-    ASTNode *arg = node->args;
+    ASTNode *arg = args;
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
@@ -289,10 +318,10 @@ Obj *handle_proc_call(ASTNode *node) {
       arg = arg->next;
     }
     return result;
-  } else if (match_tok(node->tok, "-")) {
+  } else if (match_name(name, "-")) {
     debug_log("- Handled!");
-    Obj *result = copy_value_obj(eval_ast(node->args));
-    ASTNode *arg = node->args->next;
+    Obj *result = copy_value_obj(eval_ast(args));
+    ASTNode *arg = args->next;
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
@@ -300,10 +329,10 @@ Obj *handle_proc_call(ASTNode *node) {
       arg = arg->next;
     }
     return result;
-  } else if (match_tok(node->tok, "*")) {
+  } else if (match_name(name, "*")) {
     debug_log("* evaled!");
-    Obj *result = copy_value_obj(eval_ast(node->args));
-    ASTNode *arg = node->args->next;
+    Obj *result = copy_value_obj(eval_ast(args));
+    ASTNode *arg = args->next;
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
@@ -311,104 +340,97 @@ Obj *handle_proc_call(ASTNode *node) {
       arg = arg->next;
     }
     return result;
-  } else if (match_tok(node->tok, "<")) {
+  } else if (match_name(name, "<")) {
     debug_log("< Handled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc < 2) {
-      tok_error_at(node->tok,
-                   "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     } else if (argc > 2)
       return false_obj;
-    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
-    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj *op1 = eval_ast(args);       // this is op1
+    Obj *op2 = eval_ast(args->next); // this is op2
     RETURN_IF_ERROR()
-    Obj_lt_operation(result, result, op2);
-    return result;
-  } else if (match_tok(node->tok, "<=")) {
+    return Obj_lt_operation(op1, op2);
+  } else if (match_name(name, "<=")) {
     debug_log("<= Handled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc < 2) {
-      tok_error_at(node->tok,
-                   "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     } else if (argc > 2)
       return false_obj;
-    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
-    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj *op1 = eval_ast(args);       // this is op1
+    Obj *op2 = eval_ast(args->next); // this is op2
     RETURN_IF_ERROR()
-    Obj_le_operation(result, result, op2);
-    return result;
-  } else if (match_tok(node->tok, "div") || match_tok(node->tok, "/")) {
+    return Obj_le_operation(op1, op2);
+  } else if (match_name(name, "div") || match_name(name, "/")) {
     debug_log("`div` Handled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc != 2) {
-      tok_error_at(node->tok,
-                   "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     }
-    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
-    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj *result = copy_value_obj(eval_ast(args)); // this is op1
+    Obj *op2 = eval_ast(args->next);              // this is op2
     RETURN_IF_ERROR()
     Obj_div_operation(result, result, op2);
     return result;
-  } else if (match_tok(node->tok, "remainder")) {
+  } else if (match_name(name, "remainder")) {
     debug_log("`remainder` Handled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc != 2) {
-      tok_error_at(node->tok,
-                   "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     }
-    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
-    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj *result = copy_value_obj(eval_ast(args)); // this is op1
+    Obj *op2 = eval_ast(args->next);              // this is op2
     RETURN_IF_ERROR()
     Obj_mod_operation(result, result, op2);
     return result;
-  } else if (match_tok(node->tok, "=")) {
+  } else if (match_name(name, "=")) {
     debug_log("= Handled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc != 2) {
-      tok_error_at(node->tok,
-                   "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     }
-    Obj *result = copy_value_obj(eval_ast(node->args)); // this is op1
-    Obj *op2 = eval_ast(node->args->next);              // this is op2
+    Obj *result = copy_value_obj(eval_ast(args)); // this is op1
+    Obj *op2 = eval_ast(args->next);              // this is op2
     RETURN_IF_ERROR()
     Obj_eq_operation(result, result, op2);
     return result;
-  } else if (match_tok(node->tok, "cons")) {
+  } else if (match_name(name, "cons")) {
     debug_log("`cons` evaled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc != 2) {
-      tok_error_at(node->tok, "wrong number of arguments: expects 2, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 2, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     }
     Obj *res = new_obj(CONS_TY);
-    Obj *op1 = eval_ast(node->args);
-    Obj *op2 = eval_ast(node->args->next);
+    Obj *op1 = eval_ast(args);
+    Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
     res->car = op1;
     res->cdr = op2;
     return res;
-  } else if (match_tok(node->tok, "list")) {
+  } else if (match_name(name, "list")) {
     debug_log("`list` evaled!");
     Obj *head = nillist;
     Obj *tail = nillist;
-    ASTNode *arg = node->args;
+    ASTNode *arg = args;
     while (arg) {
       Obj *cell = new_obj(CONS_TY);
       cell->car = eval_ast(arg);
@@ -422,45 +444,56 @@ Obj *handle_proc_call(ASTNode *node) {
       arg = arg->next;
     }
     return head;
-  } else if (match_tok(node->tok, "car")) {
+  } else if (match_tok(tok, "car")) {
     debug_log("car evaled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc != 1) {
-      tok_error_at(node->tok, "wrong number of arguments: expects 1, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 1, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     }
-    Obj *cell = eval_ast(node->args);
+    Obj *cell = eval_ast(args);
     RETURN_IF_ERROR()
     if (cell == nillist || cell->typ != CONS_TY) {
-      tok_error_at(node->tok, "car: expects a cons cell");
+      tok_error_at(tok, "car: expects a cons cell");
       eval_error = true;
       return NULL;
     }
     return cell->car;
-  } else if (match_tok(node->tok, "cdr")) {
+  } else if (match_name(name, "cdr")) {
     debug_log("cdr evaled!");
-    size_t argc = get_argc(node->args);
+    size_t argc = get_argc(args);
     if (argc != 1) {
-      tok_error_at(node->tok, "wrong number of arguments: expects 1, got %ld",
-                   get_argc(node->args));
+      tok_error_at(tok, "wrong number of arguments: expects 1, got %ld",
+                   get_argc(args));
       eval_error = true;
       return NULL;
     }
-    Obj *cell = eval_ast(node->args);
+    Obj *cell = eval_ast(args);
     RETURN_IF_ERROR()
     if (cell == nillist || cell->typ != CONS_TY) {
-      tok_error_at(node->tok, "car: expects a cons cell");
+      tok_error_at(tok, "car: expects a cons cell");
       eval_error = true;
       return NULL;
     }
     return cell->cdr;
+  } else if (match_tok(tok, "null?")) {
+    debug_log("NULL? evaled!");
+    Obj *val = eval_ast(args);
+    RETURN_IF_ERROR()
+    return bool_obj(val == nillist);
   }
 
+  return NULL;
+}
+
+Obj *handle_proc_call(ASTNode *node) {
   Obj *caller = eval_ast(node->caller);
-  if (!caller)
-    return NULL;
+  RETURN_IF_ERROR()
+  if (caller->typ == BUILTIN_TY)
+    return handle_builtin(node->caller->tok, caller->str_val, node->args);
+
   if (node->is_tail_call)
     return call_user_procedure(node->tok, caller, node->args, true);
   else
@@ -542,7 +575,7 @@ Obj *eval_immediate(Token *tok) {
     obj->num_val.float_val = tok->val.float_val;
     return obj;
   case BOOL_TY:
-    return tok->val.bool_val ? true_obj : false_obj;
+    return bool_obj(tok->val.bool_val);
   default:
     tok_error_at(tok, "unknown immediate type");
   }

@@ -2,6 +2,7 @@
 
 GC *gc;
 extern Frame *env;
+extern Obj *builtin;
 
 #define INITIAL_TABLE_SIZE 32
 #define MARK ((void *)-2)
@@ -56,8 +57,12 @@ void hashtable_delete_ptr(HashTable *ht, void *ptr) {
   free(key);
 }
 
+bool is_marked(Obj *obj) {
+  return hashtable_get_ptr(gc->marked_table, obj) == MARK;
+}
+
 void mark_object(Obj *obj) {
-  if (!obj)
+  if (!obj || is_marked(obj))
     return;
   hashtable_insert_ptr(gc->marked_table, obj, MARK);
   if (obj->typ == CONS_TY) {
@@ -104,7 +109,7 @@ void GC_sweep() {
   WorkList *prev = NULL;
   while (head) {
     WorkList *next = head->next;
-    if (hashtable_get_ptr(gc->marked_table, head->obj) != MARK) {
+    if (!is_marked(head->obj)) {
 #ifdef DEBUG
       print_obj(head->obj);
 #endif

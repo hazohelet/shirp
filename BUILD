@@ -5,7 +5,6 @@ filegroup(
             "*.c",
             "*.h",
         ],
-        exclude = ["main.c"],
     ),
     visibility = ["//test:__pkg__"],
 )

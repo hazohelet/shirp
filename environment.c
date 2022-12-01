@@ -126,7 +126,7 @@ Frame *pop_frame(Frame *frame) {
 
 void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val) {
   hashtable_insert(frame->table, key, keylen, val);
-  debug_log("`%.*s` registerred to frame %p", keylen, key, frame);
+  // debug_log("`%.*s` registerred to frame %p", keylen, key, frame);
 }
 
 void *frame_get_obj(Frame *frame, char *key, size_t keylen) {

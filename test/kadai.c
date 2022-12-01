@@ -45,6 +45,7 @@ int main() {
       "(define (fib-tail a b n) (if (= n 0) a (fib-tail b (+ a b ) (- n 1))))");
   eval_and_print("(define (fib2 n) (fib-tail 0 1 n))");
   test_int("(fib2 44)", 701408733);
+  GC_mark_and_sweep();
 
   println("S7");
   eval_and_print("(define (abs n) (if (< n 0) (- 0 n) n))");
@@ -62,10 +63,12 @@ int main() {
   test_float("((deriv square 0.0001) 3)", 6.000100000012054);
   eval_and_print("(define (sqrt3 x) (newton-iter2 (sqrt-base x) 1.0))");
   test_float("(sqrt3 2)", 1.4142135624530596);
+  GC_mark_and_sweep();
 
   println("S8");
   eval_and_print("(define (compose f g) (lambda (x) (g (f x))))");
   test_int("((compose (lambda (x) (+ x 1)) (lambda (x) (* x x))) 2)", 9);
+  GC_mark_and_sweep();
 
   println("S9");
   eval_and_print("(define (f1 lst) (car (car (cdr (cdr lst)))))");
@@ -75,6 +78,9 @@ int main() {
   test_int("(f1 '(1 2 (3 4) 5))", 3);
   test_int("(f2 '((3)))", 3);
   test_int("(f3 '(1 (2 (4 (5 (6 (7 3)))))))", 3);
+  eval_and_print("(define (sum-total lst) (if (null? lst) 0 (+ (car lst) "
+                 "(sum-total (cdr lst)))))");
+  test_int("(sum-total (list 1 2 3 5))", 11);
 
   test_finalize();
   return 0;

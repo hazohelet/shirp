@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define TOMBSTONE ((void *)-1)
 
@@ -29,15 +30,16 @@ typedef enum {
 } TokenKind;
 
 typedef enum {
-  UNDEF_TY,
-  BOOL_TY,
-  INT_TY,
-  FLOAT_TY,
-  CHAR_TY,
-  STRING_TY,
-  SYMBOL_TY,
-  LAMBDA_TY,
-  CONS_TY,
+  UNDEF_TY,   // undefined
+  BOOL_TY,    // bool
+  INT_TY,     // integer (64bit)
+  FLOAT_TY,   // float (64bit)
+  CHAR_TY,    // character
+  STRING_TY,  // string
+  SYMBOL_TY,  // symbol
+  LAMBDA_TY,  // lambda closure
+  BUILTIN_TY, // built-in function
+  CONS_TY,    // cons cell
 } ObjType;
 
 typedef struct Token Token;
@@ -192,5 +194,7 @@ void GC_dump();
 void hashtable_insert_ptr(HashTable *ht, void *ptr, void *val);
 void *hashtable_get_ptr(HashTable *ht, void *ptr);
 void hashtable_delete_ptr(HashTable *ht, void *ptr);
+
+void shirp_init();
 
 #endif
