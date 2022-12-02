@@ -89,10 +89,17 @@ static bool consume(TokenKind kind) {
   return false;
 }
 
+static ASTNode *copied_ast(ASTNode *node) {
+  ASTNode *new_node = (ASTNode *)shirp_calloc(1, sizeof(ASTNode));
+  memcpy(new_node, node, sizeof(ASTNode));
+  return new_node;
+}
+
 ASTNode *command_or_definition();
 ASTNode *command();
 ASTNode *definition();
 ASTNode *body();
+ASTNode *sequence();
 ASTNode *datum();
 ASTNode *expression();
 ASTNode *identifier();
@@ -186,6 +193,43 @@ ASTNode *expression() {
       EXPECT_RBR()
       debug_log("lambda has been parsed");
       return node;
+    } else if (consume_tok("cond")) {
+      debug_log("cond is parsed");
+      ASTNode *node = new_ast_node(ND_COND, prev);
+      EXPECT_LBR()
+      if (consume_tok("else")) { // (cond (else <sequence>))
+        node->listarg = sequence();
+        EXPECT_RBR()
+        EXPECT_RBR()
+        return node;
+      }
+
+      // at least one cond clause is promised
+      ASTNode *test = expression();
+      ASTNode *seq = NULL;
+      if (match_tok(cur, ")"))
+        seq = copied_ast(test);
+      else
+        seq = sequence();
+      node->caller = test;
+      node->args = seq;
+      EXPECT_RBR()
+      while (consume_lbr()) {
+        if (consume_tok("else")) {
+          node->listarg = sequence();
+          EXPECT_RBR()
+          EXPECT_RBR()
+          return node;
+        }
+        test = test->next = expression();
+        if (match_tok(cur, ")"))
+          seq = seq->next = copied_ast(test);
+        else
+          seq = seq->next = sequence();
+        EXPECT_RBR()
+      }
+      EXPECT_RBR()
+      return node;
     } else if (consume_tok("let")) {
       /* ( let ( `(<identifier> <expression>)`* ) <body> )*/
       debug_log("let is parsed!");
@@ -265,6 +309,21 @@ ASTNode *definition() {
   return NULL;
 }
 
+/* <sequence> -> <expression>+ */
+ASTNode *sequence() {
+  debug_log("sequence is parsed");
+  ASTNode *seq = new_ast_node(ND_SEQUENCE, cur);
+  ASTNode *head = expression();
+  seq->args = head;
+  ASTNode *node = head;
+  while (cur && !match_tok(cur, ")")) {
+    node->next = expression();
+    RETURN_IF_ERROR()
+    node = node->next;
+  }
+  return seq;
+}
+
 /* <body> -> <definition>* <expression>+ */
 ASTNode *body() {
   debug_log("body is parsed!");
@@ -284,20 +343,12 @@ ASTNode *body() {
     else
       last_body = last_body->next = definition();
   }
-  /* <expression> */
-  debug_log("body-expression is parsed");
+  /* <sequence> */
+  debug_log("body-sequence is parsed");
   if (!res)
-    res = last_body = expression();
+    res = last_body = sequence();
   else
-    last_body = last_body->next = expression();
-
-  /* <expression>* */
-  while (!match_tok(cur, ")")) {
-    if (!res)
-      res = last_body = expression();
-    else
-      last_body = last_body->next = expression();
-  }
+    last_body = last_body->next = sequence();
   debug_log("body has been parsed");
   return res;
 }
@@ -419,6 +470,18 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
     mark_tail_calls(consequent, is_in_tail_context);
     mark_tail_calls(alternate, is_in_tail_context);
     return;
+  case ND_COND:;
+    ASTNode *else_sequence = node->listarg;
+    mark_tail_calls(else_sequence, is_in_tail_context);
+    break;
+  case ND_SEQUENCE:;
+    ASTNode *expr = node->args;
+    while (expr && expr->next) {
+      mark_tail_calls(expr, false);
+      expr = expr->next;
+    }
+    mark_tail_calls(expr, is_in_tail_context);
+    break;
   case ND_DEFINE:;
     mark_tail_calls(node->args, false);
     return;

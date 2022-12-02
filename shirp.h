@@ -94,6 +94,8 @@ typedef enum {
   ND_QUOTE,
   ND_SYMBOL,
   ND_IF,
+  ND_COND,
+  ND_SEQUENCE,
   ND_LAMBDA,
   ND_DEFINE,
   ND_PROCCALL,
@@ -102,11 +104,21 @@ typedef enum {
 struct ASTNode {
   NodeKind kind;
   Token *tok;      // representative token
-  ASTNode *caller; // procedure calls caller expression; lambda hold its body
-  ASTNode *args; // procedure calls hold arguments; lambda holds its parameters
-  ASTNode
-      *listarg;  // lambda holds list args with <formal> without () or with `.`
-  ASTNode *next; // if this is an argument, next is needed
+  ASTNode *caller; // procedure calls caller expression; lambda hold its body;
+                   // cond holds tests
+  /*
+  procedure calls hold arguments;
+  lambda holds its parameters;
+  cond holds its clause-sequences
+  sequence holds its expressions
+  */
+  ASTNode *args; //
+
+  /* lambda holds list args with <formal> without () or with `.`;
+     cond holds else sequence
+  */
+  ASTNode *listarg;
+  ASTNode *next;     // if this is an argument, next is needed
   bool is_tail_call; // for proper tail call optimization
 };
 

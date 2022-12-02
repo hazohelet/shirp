@@ -6,6 +6,7 @@ bool eval_error = false;
 Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, 0, NULL, NULL, NULL, NULL};
 Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, 0, NULL, NULL, NULL, NULL};
 Obj *nillist = &(Obj){CONS_TY, {0}, NULL, 0, NULL, NULL, NULL, NULL};
+Obj *undefined_obj = &(Obj){UNDEF_TY, {0}, NULL, 0, NULL, NULL, NULL, NULL};
 
 #define RETURN_IF_ERROR()                                                      \
   if (eval_error)                                                              \
@@ -664,6 +665,37 @@ Obj *eval_immediate(Token *tok) {
   return NULL;
 }
 
+Obj *eval_sequence(ASTNode *node) {
+  debug_log("sequence evaled!");
+  ASTNode *arg = node->args;
+  Obj *result = NULL;
+  while (arg) {
+    result = eval_ast(arg);
+    RETURN_IF_ERROR()
+    arg = arg->next;
+  }
+  return result;
+}
+
+Obj *eval_cond(ASTNode *node) {
+  ASTNode *test = node->caller;
+  ASTNode *sequence = node->args;
+  while (test && sequence) {
+    Obj *test_val = eval_ast(test);
+    RETURN_IF_ERROR()
+    if (is_not_false(test_val)) {
+      Obj *res = eval_ast(sequence);
+      RETURN_IF_ERROR()
+      return res;
+    }
+    test = test->next;
+    sequence = sequence->next;
+  }
+  if (node->listarg) // else sequence
+    return eval_sequence(node->listarg);
+  return undefined_obj;
+}
+
 Obj *eval_ast(ASTNode *node) {
   if (!node) {
     return new_obj(UNDEF_TY);
@@ -692,6 +724,10 @@ Obj *eval_ast(ASTNode *node) {
     return eval_symbol(node);
   case ND_IF:
     return eval_if(node);
+  case ND_COND:
+    return eval_cond(node);
+  case ND_SEQUENCE:
+    return eval_sequence(node);
   case ND_PROCCALL:
     return handle_proc_call(node);
   case ND_LAMBDA:
