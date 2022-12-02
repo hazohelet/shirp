@@ -81,6 +81,10 @@ void shirp_init() {
   register_builtin("car");
   register_builtin("cdr");
   register_builtin("null?");
+  register_builtin("pair?");
+  register_builtin("list?");
+  register_builtin("symbol?");
+  register_builtin("number?");
   register_builtin("list");
   register_builtin("cons");
   register_builtin("and");

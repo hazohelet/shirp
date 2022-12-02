@@ -65,6 +65,10 @@ void print_obj(Obj *obj) {
   }
 }
 
+bool is_number(Obj *obj) {
+  return obj && (obj->typ == INT_TY || obj->typ == FLOAT_TY);
+}
+
 bool is_list(Obj *obj) {
   if (!obj)
     return false;
@@ -285,6 +289,14 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
 
 bool match_name(char *name, char *name2) { return strcmp(name, name2) == 0; }
 
+#define REQUIRE_ARGC(tok, args, num)                                           \
+  if (get_argc(args) != num) {                                                 \
+    tok_error_at(tok, "wrong number of arguments: expects %ld, got %ld", num,  \
+                 get_argc(args));                                              \
+    eval_error = true;                                                         \
+    return NULL;                                                               \
+  }
+
 Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
   if (match_name(name, "cons")) {
     debug_log("<BUILTIN cons> evaled!");
@@ -304,6 +316,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     return res;
   } else if (match_name(name, "null?")) {
     debug_log("<BUILTIN null?> evaled!");
+    REQUIRE_ARGC(tok, args, 1)
     Obj *val = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(val == nillist);
@@ -410,22 +423,6 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     RETURN_IF_ERROR()
     Obj_eq_operation(result, result, op2);
     return result;
-  } else if (match_name(name, "cons")) {
-    debug_log("`cons` evaled!");
-    size_t argc = get_argc(args);
-    if (argc != 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
-    Obj *res = new_obj(CONS_TY);
-    Obj *op1 = eval_ast(args);
-    Obj *op2 = eval_ast(args->next);
-    RETURN_IF_ERROR()
-    res->car = op1;
-    res->cdr = op2;
-    return res;
   } else if (match_name(name, "list")) {
     debug_log("`list` evaled!");
     Obj *head = nillist;
@@ -500,6 +497,26 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
       arg = arg->next;
     }
     return result;
+  } else if (match_name(name, "pair?")) { // argc == 1
+    REQUIRE_ARGC(tok, args, 1);
+    Obj *arg = eval_ast(args);
+    RETURN_IF_ERROR()
+    return bool_obj(arg->typ == CONS_TY && arg != nillist);
+  } else if (match_name(name, "list?")) {
+    REQUIRE_ARGC(tok, args, 1);
+    Obj *arg = eval_ast(args);
+    RETURN_IF_ERROR()
+    return bool_obj(is_list(arg));
+  } else if (match_name(name, "number?")) {
+    REQUIRE_ARGC(tok, args, 1);
+    Obj *arg = eval_ast(args);
+    RETURN_IF_ERROR()
+    return bool_obj(is_number(arg));
+  } else if (match_name(name, "symbol?")) {
+    REQUIRE_ARGC(tok, args, 1);
+    Obj *arg = eval_ast(args);
+    RETURN_IF_ERROR()
+    return bool_obj(arg && arg->typ == SYMBOL_TY);
   }
 
   tok_error_at(tok, "unknown builtin function: %s", name);
