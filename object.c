@@ -204,16 +204,56 @@ Obj *Obj_le_operation(Obj *op1, Obj *op2) {
   }
 }
 
-void Obj_eq_operation(Obj *dst, Obj *op1, Obj *op2) {
-  if (op1->typ == INT_TY && op2->typ == INT_TY) {
-    dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1->num_val.int_val == op2->num_val.int_val;
-  } else {
+Obj *string_equal_obj(Obj *op1, Obj *op2) {
+  if (op1->str_len != op2->str_len)
+    return false_obj;
+  return bool_obj(strncmp(op1->str_val, op2->str_val, op1->str_len) == 0);
+}
+
+Obj *and_obj(Obj *op1, Obj *op2) {
+  return bool_obj(op1->num_val.int_val && op2->num_val.int_val);
+}
+
+Obj *or_obj(Obj *op1, Obj *op2) {
+  return bool_obj(op1->num_val.int_val || op2->num_val.int_val);
+}
+
+// = and eq?
+Obj *eq_obj(Obj *op1, Obj *op2) {
+  if (op1 == op2)
+    return bool_obj(true);
+
+  if (op1->typ == INT_TY && op2->typ == INT_TY)
+    return bool_obj(op1->num_val.int_val == op2->num_val.int_val);
+  if (is_number(op1) && is_number(op2)) {
     double op1_val = get_float_val(op1);
-    double op2_val = get_float_val(op2);
-    dst->typ = BOOL_TY;
-    dst->num_val.bool_val = op1_val == op2_val;
+    double op2_val = get_float_val(op1);
+    return bool_obj(op1_val == op2_val);
   }
+  if (op1->typ == SYMBOL_TY && op2->typ == SYMBOL_TY)
+    return string_equal_obj(op1, op2);
+  if (op1->typ == STRING_TY && op2->typ == STRING_TY)
+    return string_equal_obj(op1, op2);
+  if (op1->typ == CHAR_TY && op2->typ == CHAR_TY)
+    return string_equal_obj(op1, op2);
+  return bool_obj(false);
+}
+
+// equal?
+Obj *equal_obj(Obj *op1, Obj *op2) {
+  Obj *eq_res = eq_obj(op1, op2);
+  if (eq_res == true_obj)
+    return true_obj;
+
+  if (op1->typ != op2->typ)
+    return false_obj;
+  if (op1 == nillist || op2 == nillist)
+    return false_obj;
+
+  if (op1->typ == CONS_TY)
+    return and_obj(equal_obj(op1->car, op2->car),
+                   equal_obj(op1->cdr, op2->cdr));
+  return false_obj;
 }
 
 size_t get_argc(ASTNode *args) {
@@ -409,7 +449,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     RETURN_IF_ERROR()
     Obj_mod_operation(result, result, op2);
     return result;
-  } else if (match_name(name, "=")) {
+  } else if (match_name(name, "=") || match_name(name, "eq?")) {
     debug_log("= Handled!");
     size_t argc = get_argc(args);
     if (argc != 2) {
@@ -418,11 +458,11 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
       eval_error = true;
       return NULL;
     }
-    Obj *result = copy_value_obj(eval_ast(args)); // this is op1
-    Obj *op2 = eval_ast(args->next);              // this is op2
+    Obj *op1 = eval_ast(args); // this is op1
     RETURN_IF_ERROR()
-    Obj_eq_operation(result, result, op2);
-    return result;
+    Obj *op2 = eval_ast(args->next); // this is op2
+    RETURN_IF_ERROR()
+    return eq_obj(op1, op2);
   } else if (match_name(name, "list")) {
     debug_log("`list` evaled!");
     Obj *head = nillist;
@@ -517,6 +557,13 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     Obj *arg = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(arg && arg->typ == SYMBOL_TY);
+  } else if (match_name(name, "equal?")) { // argc == 2
+    REQUIRE_ARGC(tok, args, 2)
+    Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    return equal_obj(op1, op2);
   }
 
   tok_error_at(tok, "unknown builtin function: %s", name);
