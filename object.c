@@ -478,13 +478,31 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
       return NULL;
     }
     return cell->cdr;
-  } else if (match_tok(tok, "null?")) {
-    debug_log("NULL? evaled!");
-    Obj *val = eval_ast(args);
-    RETURN_IF_ERROR()
-    return bool_obj(val == nillist);
+  } else if (match_name(name, "and")) { // argc >= 0
+    Obj *result = true_obj;
+    ASTNode *arg = args;
+    while (arg) {
+      result = eval_ast(arg);
+      RETURN_IF_ERROR()
+      if (result == false_obj)
+        break;
+      arg = arg->next;
+    }
+    return result;
+  } else if (match_name(name, "or")) { // argc >= 0
+    Obj *result = false_obj;
+    ASTNode *arg = args;
+    while (arg) {
+      result = eval_ast(arg);
+      RETURN_IF_ERROR()
+      if (result != false_obj)
+        break;
+      arg = arg->next;
+    }
+    return result;
   }
 
+  tok_error_at(tok, "unknown builtin function: %s", name);
   return NULL;
 }
 

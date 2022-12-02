@@ -83,6 +83,8 @@ void shirp_init() {
   register_builtin("null?");
   register_builtin("list");
   register_builtin("cons");
+  register_builtin("and");
+  register_builtin("or");
 }
 
 #ifndef TEST

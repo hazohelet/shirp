@@ -75,11 +75,10 @@ bool is_keyword(Token *token) {
     return false;
   }
   static char *keywords[] = {
-      "if",          "cond",    "case",        "else",         "and",
-      "or",          "when",    "unless",      "let",          "let*",
-      "letrec",      "letrec*", "let-values",  "let*-values",  "begin",
-      "do",          "delay",   "delay-force", "parameterize", "guard",
-      "case-lambda", "lambda"};
+      "if",          "cond",         "case",  "else",        "when",
+      "unless",      "let",          "let*",  "letrec",      "letrec*",
+      "let-values",  "let*-values",  "begin", "do",          "delay",
+      "delay-force", "parameterize", "guard", "case-lambda", "lambda"};
   for (size_t i = 0; i < sizeof(keywords) / sizeof(*keywords); i++) {
     if (token->len == strlen(keywords[i]) &&
         !strncmp(token->loc, keywords[i], token->len)) {

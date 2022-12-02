@@ -30,6 +30,21 @@ int main() {
 
   println("S14");
   eval_and_print("(define (complex a b) (cons a b))");
+  eval_and_print("(define (complex= c1 c2)"
+                 "(and (= (car c1) (car c2))"
+                 "(= (cdr c1) (cdr c2))))");
+  eval_and_print("(define (complex+ c1 c2)"
+                 "(complex (+ (car c1) (car c2)) (+ (cdr c1) (cdr c2))))");
+  eval_and_print("(define (complex* c1 c2)"
+                 "(define r1 (car c1))"
+                 "(define r2 (car c2))"
+                 "(define i1 (cdr c1))"
+                 "(define i2 (cdr c2))"
+                 "(complex (- (* r1 r2) (* i1 i2)) (+ (* r1 i2) (* r2 i1))))");
+  test_int("(car (complex+ (complex 1 2) (complex 3 4)))", 4);
+  test_int("(cdr (complex+ (complex 1 2) (complex 3 4)))", 6);
+  test_int("(car (complex* (complex 4 2) (complex -9 4)))", -44);
+  test_int("(cdr (complex* (complex 4 2) (complex -9 4)))", -2);
 
   test_finalize();
   return 0;
