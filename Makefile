@@ -13,10 +13,11 @@ debug: *.c *.h
 test: test_expr test_kadai1 test_kadai2 test_quote
 	./test_expr && ./test_kadai1 && ./test_kadai2 && ./test_quote
 
+
 	@if [ "$$?" = "0" ]; then\
-		echo >&2 "\e[32mALL TESTS PASSED\e[0m";\
+		printf "\033[32mAll TESTS PASSED\033[0m\n";\
 	else\
-		echo >&2 "\e[1m\e[31mSOME TEST FAILED\e[0m";\
+		printf "\033[1m\033[31mAll TESTS PASSED\033[0m\n";\
 	fi;
 
 test_expr: test/expr.c testtools
