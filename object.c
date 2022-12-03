@@ -333,7 +333,7 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
 
 bool match_name(char *name, char *name2) { return strcmp(name, name2) == 0; }
 
-#define REQUIRE_ARGC(tok, args, num)                                           \
+#define REQUIRE_ARGC_EQ(tok, args, num)                                        \
   if (get_argc(args) != num) {                                                 \
     tok_error_at(tok, "wrong number of arguments: expects %ld, got %ld", num,  \
                  get_argc(args));                                              \
@@ -341,16 +341,19 @@ bool match_name(char *name, char *name2) { return strcmp(name, name2) == 0; }
     return NULL;                                                               \
   }
 
+#define REQUIRE_ARGC_GE(tok, args, num)                                        \
+  if (get_argc(args) < num) {                                                  \
+    tok_error_at(tok,                                                          \
+                 "wrong number of arguments: expects at least %ld, got %ld",   \
+                 num, get_argc(args));                                         \
+    eval_error = true;                                                         \
+    return NULL;                                                               \
+  }
+
 Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
   if (match_name(name, "cons")) {
     debug_log("<BUILTIN cons> evaled!");
-    size_t argc = get_argc(args);
-    if (argc != 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
+    REQUIRE_ARGC_EQ(tok, args, 2);
     Obj *res = new_obj(CONS_TY);
     Obj *op1 = eval_ast(args);
     Obj *op2 = eval_ast(args->next);
@@ -360,7 +363,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     return res;
   } else if (match_name(name, "null?")) {
     debug_log("<BUILTIN null?> evaled!");
-    REQUIRE_ARGC(tok, args, 1)
+    REQUIRE_ARGC_EQ(tok, args, 1)
     Obj *val = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(val == nillist);
@@ -377,7 +380,13 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     return result;
   } else if (match_name(name, "-")) {
     debug_log("- Handled!");
+    REQUIRE_ARGC_GE(tok, args, 1)
     Obj *result = copy_value_obj(eval_ast(args));
+    RETURN_IF_ERROR()
+    if (get_argc(args) == 1) {
+      Obj_sub_operation(result, new_int_obj(0), result);
+      return result;
+    }
     ASTNode *arg = args->next;
     while (arg) {
       Obj *op2 = eval_ast(arg);
@@ -388,8 +397,8 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     return result;
   } else if (match_name(name, "*")) {
     debug_log("* evaled!");
-    Obj *result = copy_value_obj(eval_ast(args));
-    ASTNode *arg = args->next;
+    Obj *result = new_int_obj(1);
+    ASTNode *arg = args;
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
@@ -399,72 +408,80 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     return result;
   } else if (match_name(name, "<")) {
     debug_log("< Handled!");
-    size_t argc = get_argc(args);
-    if (argc < 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    } else if (argc > 2)
-      return false_obj;
-    Obj *op1 = eval_ast(args);       // this is op1
-    Obj *op2 = eval_ast(args->next); // this is op2
+    REQUIRE_ARGC_GE(tok, args, 2)
+    Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
-    return Obj_lt_operation(op1, op2);
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    Obj *result = Obj_lt_operation(op1, op2);
+    ASTNode *arg = args->next->next;
+    op1 = op2;
+    while (arg) {
+      op2 = eval_ast(arg);
+      RETURN_IF_ERROR()
+      result = and_obj(result, Obj_lt_operation(op1, op2));
+      op1 = op2;
+      arg = arg->next;
+    }
+    return result;
   } else if (match_name(name, "<=")) {
     debug_log("<= Handled!");
-    size_t argc = get_argc(args);
-    if (argc < 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    } else if (argc > 2)
-      return false_obj;
-    Obj *op1 = eval_ast(args);       // this is op1
-    Obj *op2 = eval_ast(args->next); // this is op2
+    REQUIRE_ARGC_GE(tok, args, 2)
+    Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
-    return Obj_le_operation(op1, op2);
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    Obj *result = Obj_le_operation(op1, op2);
+    ASTNode *arg = args->next->next;
+    op1 = op2;
+    while (arg) {
+      op2 = eval_ast(arg);
+      RETURN_IF_ERROR()
+      result = and_obj(result, Obj_le_operation(op1, op2));
+      op1 = op2;
+      arg = arg->next;
+    }
+    return result;
   } else if (match_name(name, "div") || match_name(name, "/")) {
     debug_log("`div` Handled!");
-    size_t argc = get_argc(args);
-    if (argc != 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
-    Obj *result = copy_value_obj(eval_ast(args)); // this is op1
-    Obj *op2 = eval_ast(args->next);              // this is op2
+    REQUIRE_ARGC_EQ(tok, args, 2)
+    Obj *result = copy_value_obj(eval_ast(args));
+    Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
     Obj_div_operation(result, result, op2);
     return result;
   } else if (match_name(name, "remainder")) {
     debug_log("`remainder` Handled!");
-    size_t argc = get_argc(args);
-    if (argc != 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
-    Obj *result = copy_value_obj(eval_ast(args)); // this is op1
-    Obj *op2 = eval_ast(args->next);              // this is op2
+    REQUIRE_ARGC_EQ(tok, args, 2)
+    Obj *result = copy_value_obj(eval_ast(args));
+    Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
     Obj_mod_operation(result, result, op2);
     return result;
-  } else if (match_name(name, "=") || match_name(name, "eq?")) {
+  } else if (match_name(name, "=")) {
     debug_log("= Handled!");
-    size_t argc = get_argc(args);
-    if (argc != 2) {
-      tok_error_at(tok, "wrong number of arguments: expects 2 or more, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
-    Obj *op1 = eval_ast(args); // this is op1
+    REQUIRE_ARGC_GE(tok, args, 2)
+    Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
-    Obj *op2 = eval_ast(args->next); // this is op2
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    Obj *result = eq_obj(op1, op2);
+    ASTNode *arg = args->next->next;
+    op1 = op2;
+    while (arg) {
+      op2 = eval_ast(arg);
+      RETURN_IF_ERROR()
+      result = and_obj(result, eq_obj(op1, op2));
+      op1 = op2;
+      arg = arg->next;
+    }
+    return result;
+  } else if (match_name(name, "eq?")) {
+    debug_log("eq? Handled!");
+    REQUIRE_ARGC_EQ(tok, args, 2)
+    Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
     return eq_obj(op1, op2);
   } else if (match_name(name, "list")) {
@@ -542,34 +559,34 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     }
     return result;
   } else if (match_name(name, "pair?")) { // argc == 1
-    REQUIRE_ARGC(tok, args, 1);
+    REQUIRE_ARGC_EQ(tok, args, 1);
     Obj *arg = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(arg->typ == CONS_TY && arg != nillist);
   } else if (match_name(name, "list?")) {
-    REQUIRE_ARGC(tok, args, 1);
+    REQUIRE_ARGC_EQ(tok, args, 1);
     Obj *arg = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(is_list(arg));
   } else if (match_name(name, "number?")) {
-    REQUIRE_ARGC(tok, args, 1);
+    REQUIRE_ARGC_EQ(tok, args, 1);
     Obj *arg = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(is_number(arg));
   } else if (match_name(name, "symbol?")) {
-    REQUIRE_ARGC(tok, args, 1);
+    REQUIRE_ARGC_EQ(tok, args, 1);
     Obj *arg = eval_ast(args);
     RETURN_IF_ERROR()
     return bool_obj(arg && arg->typ == SYMBOL_TY);
   } else if (match_name(name, "equal?")) { // argc == 2
-    REQUIRE_ARGC(tok, args, 2)
+    REQUIRE_ARGC_EQ(tok, args, 2)
     Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
     Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
     return equal_obj(op1, op2);
   } else if (match_name(name, "sqrt")) {
-    REQUIRE_ARGC(tok, args, 1)
+    REQUIRE_ARGC_EQ(tok, args, 1)
     Obj *op1 = eval_ast(args);
     if (is_number(op1)) {
       double val = get_float_val(op1);

@@ -204,7 +204,7 @@ void test_string(char *str, char *expected) {
 void test_finalize() {
   if (failure) {
     fprintf(stderr, "\x1b[1m\x1b[31mTEST FAILED\x1b[0m\n");
-    return;
+    exit(1);
   }
   fprintf(stderr, "\x1b[1m\x1b[32mTEST SUCCESS\x1b[0m\n");
 }

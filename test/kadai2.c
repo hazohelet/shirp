@@ -101,6 +101,18 @@ int main() {
   test_symbol("(deriv '(* x y) 'x)", "y");
   test_symbol("(deriv '(+ 5 (* y (+ x z))) 'x)", "y");
 
+  println("S18");
+  eval_and_print("(define a 100)");
+  eval_and_print("(define b 1)");
+  test_int("(let ((a 10) (b (+ a 1)) (c (- b 1))) (let ((a c) (b (+ a 1)) (c "
+           "(let ((b 9)) (- b a)))) (+ a b c)))",
+           10);
+
+  println("S19");
+  eval_and_print("(define a 100)");
+  eval_and_print("(define h (lambda (x) (lambda (y) (+ x (* a y)))))");
+  test_int("(let ((a 0)) ((h 1) (+ a 5)))", 501);
+
   println("S20");
   eval_and_print("(define (make-monitored f)"
                  "(let ((num 0))"

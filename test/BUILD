@@ -16,9 +16,9 @@ cc_binary(
 )
 
 cc_binary(
-    name = "kadai",
+    name = "kadai1",
     srcs = [
-        "kadai.c",
+        "kadai1.c",
         "testtools.c",
         "testtools.h",
         "//:tools",
@@ -35,7 +35,7 @@ cc_binary(
 cc_binary(
     name = "kadai2",
     srcs = [
-        "kadai11-20.c",
+        "kadai2.c",
         "testtools.c",
         "testtools.h",
         "//:tools",

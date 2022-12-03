@@ -45,6 +45,19 @@ int main() {
   test_int("(gcd 9801 1287)", 99);
   test_int("(gcd 1287 9801)", 99);
   GC_mark_and_sweep();
+  test_int("(cond (else 42))", 42);
+  test_int("(cond (33) (else 42))", 33);
+  test_int("(cond (#f) (else 42))", 42);
+  test_int("(cond (#f 34) (else 42))", 42);
+  test_bool("(= 42 42 42 42 42)", true);
+  test_bool("(= 42 42 24 42 42)", false);
+  test_bool("(< -12 -3 -2 0 12 44)", true);
+  test_bool("(< -12 -3 8 3)", false);
+  test_bool("(<= 42 42 42 42 42)", true);
+  test_bool("(<= 42 42 43 45 45)", true);
+  test_int("(+)", 0);
+  test_int("(*)", 1);
+  test_int("(- 42)", -42);
 
   test_finalize();
   return 0;
