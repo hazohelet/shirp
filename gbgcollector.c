@@ -72,6 +72,11 @@ void mark_object(Obj *obj) {
 }
 
 void mark_frame(Frame *frame) {
+  // this is for avoiding infinite loop in lambda saved frames
+  if (hashtable_get_ptr(gc->marked_table, frame) == MARK)
+    return;
+  // mark the frame to avoid revisit
+  hashtable_insert_ptr(gc->marked_table, frame, MARK);
   for (size_t i = 0; i < frame->table->capacity; i++) {
     Entry *entry = frame->table->buckets[i];
     if (entry && entry != TOMBSTONE) {
@@ -79,6 +84,17 @@ void mark_frame(Frame *frame) {
       mark_object(obj);
       if (obj->typ == LAMBDA_TY)
         mark_frame(obj->exclusive.saved_env);
+    }
+  }
+}
+
+void unmark_all() {
+  for (size_t i = 0; i < gc->marked_table->capacity; i++) {
+    Entry *entry = gc->marked_table->buckets[i];
+    if (entry && entry != TOMBSTONE) {
+      free(entry->key);
+      free(entry);
+      gc->marked_table->buckets[i] = TOMBSTONE;
     }
   }
 }
@@ -116,12 +132,11 @@ void GC_sweep() {
       debug_log(" will be freed!");
       sweep_worklist_item(prev, head);
       --gc->size;
-    } else {
-      hashtable_delete_ptr(gc->marked_table, head->obj);
+    } else
       prev = head;
-    }
     head = next;
   }
+  unmark_all();
 }
 
 void GC_collect() {

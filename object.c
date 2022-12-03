@@ -653,18 +653,34 @@ Obj *eval_quote(ASTNode *node) {
   return head;
 }
 
-void handle_definition(ASTNode *node) {
-  debug_log("definition handled!");
-  frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
-                   eval_ast(node->args));
-}
-
-Obj *handle_lambda(ASTNode *node) {
+Obj *handle_lambda(ASTNode *node, Obj *placeholder) {
   debug_log("lambda evaled!");
-  Obj *obj = new_obj(LAMBDA_TY);
+  Obj *obj = placeholder ? placeholder : new_obj(LAMBDA_TY);
   obj->lambda_ast = node;
   obj->exclusive.saved_env = copied_environment(env);
   return obj;
+}
+
+Obj *handle_definition(ASTNode *node) {
+  debug_log("definition handled!");
+  Obj *value;
+  if (node->args->kind == ND_LAMBDA) {
+    /* make a placeholder for lambda so that that the evaluated lambda saved_env
+     * holds the information of itself */
+    value = new_obj(LAMBDA_TY);
+    /* register to the environment before the lambda evaluation */
+    frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
+                     value);
+    handle_lambda(node->args, value);
+    RETURN_IF_ERROR()
+    return NULL;
+  } else {
+    value = eval_ast(node->args);
+    RETURN_IF_ERROR()
+    frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
+                     value);
+    return NULL;
+  }
 }
 
 Obj *eval_symbol(ASTNode *node) {
@@ -773,11 +789,11 @@ Obj *eval_ast(ASTNode *node) {
   case ND_PROCCALL:
     return handle_proc_call(node);
   case ND_LAMBDA:
-    return handle_lambda(node);
+    return handle_lambda(node, NULL);
   case ND_SET:
     return handle_set(node);
   case ND_DEFINE:
-    handle_definition(node);
+    return handle_definition(node);
     break;
   }
   return NULL;
