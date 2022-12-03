@@ -1,6 +1,6 @@
 #include "testtools.h"
 
-Frame *env;
+extern Frame *env;
 extern bool lexical_error;
 extern bool syntax_error;
 extern bool eval_error;
@@ -18,7 +18,7 @@ Obj *eval_str(char *str) {
     return NULL;
   }
   cur = head.next;
-  ASTNode *node = program(&head);
+  ASTNode *node = program();
   if (syntax_error) {
     failure = true;
     return NULL;
@@ -59,8 +59,8 @@ void test_int(char *str, int64_t expected) {
   Obj *val = eval_str(str);
   bool success = assert_int(val, expected);
   if (success)
-    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%" PRId64 "`\n",
-            str, expected);
+    fprintf(stderr, "\x1b[32mSUCCESS\x1b[0m: `%s` == `%" PRId64 "`\n", str,
+            expected);
   else
     fprintf(stderr,
             "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%" PRId64
@@ -73,8 +73,7 @@ void test_float(char *str, double expected) {
   Obj *val = eval_str(str);
   bool success = assert_float(val, expected);
   if (success)
-    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%f`\n", str,
-            expected);
+    fprintf(stderr, "\x1b[32mSUCCESS\x1b[0m: `%s` == `%f`\n", str, expected);
   else
     fprintf(
         stderr,
@@ -119,7 +118,7 @@ void test_list_int(char *str, int64_t expected[], size_t size) {
     }
     list = list->cdr;
   }
-  fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == (", str);
+  fprintf(stderr, "\x1b[32mSUCCESS\x1b[0m: `%s` == (", str);
   for (size_t i = 0; i < size; i++) {
     fprintf(stderr, "%" PRId64, expected[i]);
     if (i != size - 1)
@@ -145,7 +144,7 @@ void test_bool(char *str, bool expected) {
   Obj *val = eval_str(str);
   bool success = assert_bool(val, expected);
   if (success)
-    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str,
+    fprintf(stderr, "\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str,
             expected ? "#t" : "#f");
   else
     fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
@@ -169,8 +168,7 @@ void test_symbol(char *str, char *expected) {
   Obj *val = eval_str(str);
   bool success = assert_symbol(val, expected);
   if (success)
-    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str,
-            expected);
+    fprintf(stderr, "\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str, expected);
   else
     fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
             expected);
@@ -193,8 +191,7 @@ void test_string(char *str, char *expected) {
   Obj *val = eval_str(str);
   bool success = assert_string(val, expected);
   if (success)
-    fprintf(stderr, "\x1b[1m\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str,
-            expected);
+    fprintf(stderr, "\x1b[32mSUCCESS\x1b[0m: `%s` == `%s`\n", str, expected);
   else
     fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
             expected);
@@ -206,7 +203,7 @@ void test_finalize() {
     fprintf(stderr, "\x1b[1m\x1b[31mTEST FAILED\x1b[0m\n");
     exit(1);
   }
-  fprintf(stderr, "\x1b[1m\x1b[32mTEST SUCCESS\x1b[0m\n");
+  fprintf(stderr, "\x1b[32mTEST SUCCESS\x1b[0m\n");
 }
 
 void eval_and_print(char *str) {
