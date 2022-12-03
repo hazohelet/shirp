@@ -101,19 +101,21 @@ typedef enum {
 } NodeKind;
 
 struct ASTNode {
-  NodeKind kind;
-  Token *tok;      // representative token
+  NodeKind kind;   // kind of the node
+  Token *tok;      // representative token: mainly for error reporint
   ASTNode *caller; // procedure calls caller expression; lambda hold its body;
                    // cond holds tests
   /*
+  `args` is intended to be a linked list
   procedure calls hold arguments;
   lambda holds its parameters;
   cond holds its clause-sequences
   sequence holds its expressions
   */
-  ASTNode *args; //
+  ASTNode *args;
 
-  /* lambda holds list args with <formal> without () or with `.`;
+  /* lambda holds list args with <formal> without () or with `.`
+     although not implemented yet;
      cond holds else sequence
   */
   ASTNode *listarg;

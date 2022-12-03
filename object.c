@@ -3,6 +3,7 @@
 extern Frame *env;
 bool eval_error = false;
 
+/* Some of the common values are pre-defined for memory efficiency */
 Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, NULL};
 Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, NULL};
 Obj *nillist = &(Obj){CONS_TY, {0}, NULL, NULL};
@@ -12,6 +13,7 @@ Obj *undefined_obj = &(Obj){UNDEF_TY, {0}, NULL, NULL};
   if (eval_error)                                                              \
     return NULL;
 
+/* `print_obj` does not print '\n' at the end for recursive calls */
 void print_obj(Obj *obj) {
   if (!obj) {
     fprintf(stderr, "NULL");
@@ -33,7 +35,7 @@ void print_obj(Obj *obj) {
   case LAMBDA_TY:
     fprintf(stderr, "#<closure>");
     break;
-  case CONS_TY:
+  case CONS_TY: // cons cells are assumed not to be circular
     fprintf(stderr, "(");
     while (obj && obj->cdr && obj != nillist) {
       Obj *car = obj->exclusive.car;
@@ -288,42 +290,44 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
   }
 
   Frame *exec_env;
-  if (is_tail_call) {
-    /* tail call optimization */
-    // exec_env = copy_frame(env, proc->saved_env);
+  /* tail call optimization */
+  /* If is a tail call, the current frame will be used again
+     If not, push a new frame on the environment */
+  if (is_tail_call)
     exec_env = env;
-  } else {
-
-    /* copied because the pointer of the saved environment needs to point other
-     * frames, especially in recursive calls */
-    exec_env = copied_environment(
-        proc->exclusive.saved_env);       // retrieve the saved environment
-    exec_env = push_frame(exec_env, env); // push frame on the stack
-  }
+  else
+    exec_env = push_new_frame(env);
 
   ASTNode *proc_arg = proc->lambda_ast->args;
   /* set up arguments to new frame */
   Frame *arg_frame = push_new_frame(NULL);
   while (proc_arg) {
+    /* register to the frame other than `env` because it would interfere with
+       the coming argument evaluations */
     frame_insert_obj(arg_frame, proc_arg->tok->loc, proc_arg->tok->len,
                      eval_ast(args));
     RETURN_IF_ERROR()
     proc_arg = proc_arg->next;
     args = args->next;
   }
-  /* Environment has to come here because procedure arguments values shall be
-   * evaluated in the previous environment */
-  env = copy_frame(exec_env, arg_frame);
+  env = exec_env;
+  /* Before adding args, add the saved env info to the frame */
+  env = copy_frame(env, proc->exclusive.saved_env);
+  /* Add arguments to the current environment */
+  env = copy_frame(env, arg_frame);
+  /* frame for argument is a temporary one, shall be discarded */
   pop_frame(arg_frame);
 
+  /* the last value is the result of procedure call */
   Obj *res = NULL;
   ASTNode *body = proc->lambda_ast->caller;
   while (body) {
     res = eval_ast(body);
     body = body->next;
   }
+  /* If not a tail call, we shall pop the frame for the execution when `ret` */
   if (!is_tail_call)
-    env = pop_frame(env); // pop the execution environment
+    env = pop_frame(env);
   return res;
 }
 
@@ -719,7 +723,7 @@ Obj *eval_cond(ASTNode *node) {
 
 Obj *eval_ast(ASTNode *node) {
   if (!node) {
-    return new_obj(UNDEF_TY);
+    return undefined_obj;
   }
   switch (node->kind) {
   case ND_IDENT:
