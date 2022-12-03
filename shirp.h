@@ -97,6 +97,7 @@ typedef enum {
   ND_COND,
   ND_SEQUENCE,
   ND_LAMBDA,
+  ND_SET,
   ND_DEFINE,
   ND_PROCCALL,
 } NodeKind;

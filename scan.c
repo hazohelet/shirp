@@ -78,7 +78,8 @@ bool is_keyword(Token *token) {
       "if",          "cond",         "case",  "else",        "when",
       "unless",      "let",          "let*",  "letrec",      "letrec*",
       "let-values",  "let*-values",  "begin", "do",          "delay",
-      "delay-force", "parameterize", "guard", "case-lambda", "lambda"};
+      "delay-force", "parameterize", "guard", "case-lambda", "lambda",
+      "set!"};
   for (size_t i = 0; i < sizeof(keywords) / sizeof(*keywords); i++) {
     if (token->len == strlen(keywords[i]) &&
         !strncmp(token->loc, keywords[i], token->len)) {

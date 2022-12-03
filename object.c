@@ -677,6 +677,16 @@ Obj *eval_sequence(ASTNode *node) {
   return result;
 }
 
+Obj *handle_set(ASTNode *node) {
+  debug_log("set! handled!");
+  Obj *obj = eval_ast(node->caller);
+  RETURN_IF_ERROR()
+  Obj *new_val = eval_ast(node->args);
+  RETURN_IF_ERROR()
+  memcpy(obj, new_val, sizeof(Obj));
+  return obj;
+}
+
 Obj *eval_cond(ASTNode *node) {
   ASTNode *test = node->caller;
   ASTNode *sequence = node->args;
@@ -732,6 +742,8 @@ Obj *eval_ast(ASTNode *node) {
     return handle_proc_call(node);
   case ND_LAMBDA:
     return handle_lambda(node);
+  case ND_SET:
+    return handle_set(node);
   case ND_DEFINE:
     handle_definition(node);
     break;

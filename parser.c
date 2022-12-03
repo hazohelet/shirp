@@ -257,6 +257,14 @@ ASTNode *expression() {
       EXPECT_RBR()
       debug_log("let has been parsed");
       return proccall;
+    } else if (consume_tok("set!")) { // assignment
+      ASTNode *node = new_ast_node(ND_SET, cur);
+      node->caller = identifier();
+      RETURN_IF_ERROR()
+      node->args = expression();
+      RETURN_IF_ERROR()
+      EXPECT_RBR()
+      return node;
     }
   }
   tok_error_at(cur, "unexpected token in expression");
@@ -486,6 +494,7 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
     mark_tail_calls(node->args, false);
     return;
   case ND_IDENT:
+  case ND_SET:
   case ND_IMMEDIATE:
   case ND_STRING:
   case ND_SYMBOL:
