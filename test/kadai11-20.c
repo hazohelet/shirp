@@ -101,6 +101,22 @@ int main() {
   test_symbol("(deriv '(* x y) 'x)", "y");
   test_symbol("(deriv '(+ 5 (* y (+ x z))) 'x)", "y");
 
+  println("S20");
+  eval_and_print("(define (make-monitored f)"
+                 "(let ((num 0))"
+                 "(lambda (x)"
+                 "(cond ((eq? x 'how-many-calls?) num)"
+                 "((eq? x 'reset-count) (set! num 0))"
+                 "(else (set! num (+ num 1)) (f x))))))");
+  eval_and_print("(define s (make-monitored sqrt))");
+  test_float("(s 100)", 10);
+  test_int("(s 'how-many-calls?)", 1);
+  test_float("(s 400)", 20);
+  test_int("(s 'how-many-calls?)", 2);
+  eval_and_print("(s 'reset-count)");
+  test_float("(s 900)", 30);
+  test_int("(s 'how-many-calls?)", 1);
+
   test_finalize();
   return 0;
 }

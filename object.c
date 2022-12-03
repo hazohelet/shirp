@@ -565,6 +565,15 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
     return equal_obj(op1, op2);
+  } else if (match_name(name, "sqrt")) {
+    REQUIRE_ARGC(tok, args, 1)
+    Obj *op1 = eval_ast(args);
+    if (is_number(op1)) {
+      double val = get_float_val(op1);
+      return new_float_obj(sqrt(val));
+    }
+    tok_error_at(tok, "sqrt: expects a number");
+    return NULL;
   }
 
   tok_error_at(tok, "unknown builtin function: %s", name);
