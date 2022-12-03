@@ -36,7 +36,7 @@ bool assert_int(Obj *tested, int64_t expected) {
     failure = true;
     return false;
   }
-  if (tested->num_val.int_val != expected) {
+  if (tested->exclusive.int_val != expected) {
     failure = true;
     return false;
   }
@@ -48,7 +48,7 @@ bool assert_float(Obj *tested, double expected) {
     failure = true;
     return false;
   }
-  if (tested->num_val.float_val != expected) {
+  if (tested->exclusive.float_val != expected) {
     failure = true;
     return false;
   }
@@ -65,7 +65,7 @@ void test_int(char *str, int64_t expected) {
     fprintf(stderr,
             "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%" PRId64
             "`, not = `%" PRId64 "`\n",
-            str, val->num_val.int_val, expected);
+            str, val->exclusive.int_val, expected);
   // GC_mark_and_sweep();
 }
 
@@ -79,7 +79,7 @@ void test_float(char *str, double expected) {
     fprintf(
         stderr,
         "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%lf`, not = `%lf`\n",
-        str, val->num_val.float_val, expected);
+        str, val->exclusive.float_val, expected);
   // GC_mark_and_sweep();
 }
 
@@ -108,12 +108,12 @@ void test_list_int(char *str, int64_t expected[], size_t size) {
     return;
   }
   for (size_t idx = 1; idx <= size; idx++) {
-    Obj *car = list->car;
+    Obj *car = list->exclusive.car;
     if (!assert_int(car, expected[idx - 1])) {
       fprintf(stderr,
               "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to list with "
               "%ldth element `%" PRId64 "`, not = `%" PRId64 "`\n",
-              str, idx, car->num_val.int_val, expected[idx - 1]);
+              str, idx, car->exclusive.int_val, expected[idx - 1]);
       failure = true;
       return;
     }
@@ -134,7 +134,7 @@ bool assert_bool(Obj *tested, bool expected) {
     failure = true;
     return false;
   }
-  if (tested->num_val.bool_val != expected) {
+  if (tested->exclusive.bool_val != expected) {
     failure = true;
     return false;
   }
@@ -158,8 +158,7 @@ bool assert_symbol(Obj *tested, char *expected) {
     failure = true;
     return false;
   }
-  if (strlen(expected) != tested->str_len ||
-      strncmp(tested->str_val, expected, tested->str_len) != 0) {
+  if (strcmp(tested->exclusive.str_val, expected) != 0) {
     failure = true;
     return false;
   }
@@ -183,8 +182,7 @@ bool assert_string(Obj *tested, char *expected) {
     failure = true;
     return false;
   }
-  if (strlen(expected) != tested->str_len ||
-      strncmp(tested->str_val, expected, tested->str_len) != 0) {
+  if (strcmp(tested->exclusive.str_val, expected) != 0) {
     failure = true;
     return false;
   }

@@ -66,7 +66,7 @@ void mark_object(Obj *obj) {
     return;
   hashtable_insert_ptr(gc->marked_table, obj, MARK);
   if (obj->typ == CONS_TY) {
-    mark_object(obj->car);
+    mark_object(obj->exclusive.car);
     mark_object(obj->cdr);
   }
 }
@@ -78,7 +78,7 @@ void mark_frame(Frame *frame) {
       Obj *obj = (Obj *)entry->val;
       mark_object(obj);
       if (obj->typ == LAMBDA_TY)
-        mark_frame(obj->saved_env);
+        mark_frame(obj->exclusive.saved_env);
     }
   }
 }

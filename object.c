@@ -3,10 +3,10 @@
 extern Frame *env;
 bool eval_error = false;
 
-Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, 0, NULL, NULL, NULL, NULL};
-Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, 0, NULL, NULL, NULL, NULL};
-Obj *nillist = &(Obj){CONS_TY, {0}, NULL, 0, NULL, NULL, NULL, NULL};
-Obj *undefined_obj = &(Obj){UNDEF_TY, {0}, NULL, 0, NULL, NULL, NULL, NULL};
+Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, NULL};
+Obj *false_obj = &(Obj){BOOL_TY, {false}, NULL, NULL};
+Obj *nillist = &(Obj){CONS_TY, {0}, NULL, NULL};
+Obj *undefined_obj = &(Obj){UNDEF_TY, {0}, NULL, NULL};
 
 #define RETURN_IF_ERROR()                                                      \
   if (eval_error)                                                              \
@@ -22,13 +22,13 @@ void print_obj(Obj *obj) {
     fprintf(stderr, "#<undef>");
     break;
   case BOOL_TY:
-    fprintf(stderr, "%s", obj->num_val.bool_val ? "#t" : "#f");
+    fprintf(stderr, "%s", obj->exclusive.bool_val ? "#t" : "#f");
     break;
   case INT_TY:
-    fprintf(stderr, "%" PRId64 "", obj->num_val.int_val);
+    fprintf(stderr, "%" PRId64 "", obj->exclusive.int_val);
     break;
   case FLOAT_TY:
-    fprintf(stderr, "%lf", obj->num_val.float_val);
+    fprintf(stderr, "%lf", obj->exclusive.float_val);
     break;
   case LAMBDA_TY:
     fprintf(stderr, "#<closure>");
@@ -36,7 +36,7 @@ void print_obj(Obj *obj) {
   case CONS_TY:
     fprintf(stderr, "(");
     while (obj && obj->cdr && obj != nillist) {
-      Obj *car = obj->car;
+      Obj *car = obj->exclusive.car;
       Obj *cdr = obj->cdr;
       print_obj(car);
       if (obj->cdr != nillist)
@@ -52,13 +52,13 @@ void print_obj(Obj *obj) {
     fprintf(stderr, ")");
     break;
   case SYMBOL_TY:
-    fprintf(stderr, "%.*s", (int)obj->str_len, obj->str_val);
+    fprintf(stderr, "%s", obj->exclusive.str_val);
     break;
   case CHAR_TY:
-    fprintf(stderr, "#\\%.*s", (int)obj->str_len, obj->str_val);
+    fprintf(stderr, "#\\%s", obj->exclusive.str_val);
     break;
   case STRING_TY:
-    fprintf(stderr, "\"%.*s\"", (int)obj->str_len, obj->str_val);
+    fprintf(stderr, "\"%s\"", obj->exclusive.str_val);
     break;
   case BUILTIN_TY:
     fprintf(stderr, "#<builtin-closure>");
@@ -96,13 +96,13 @@ Obj *bool_obj(bool val) { return val ? true_obj : false_obj; }
 
 Obj *new_int_obj(int64_t val) {
   Obj *obj = new_obj(INT_TY);
-  obj->num_val.int_val = val;
+  obj->exclusive.int_val = val;
   return obj;
 }
 
 Obj *new_float_obj(double val) {
   Obj *obj = new_obj(FLOAT_TY);
-  obj->num_val.float_val = val;
+  obj->exclusive.float_val = val;
   return obj;
 }
 
@@ -114,80 +114,81 @@ Obj *copy_value_obj(Obj *obj) {
 
 Obj *new_string_obj(char *str, size_t len) {
   Obj *obj = new_obj(STRING_TY);
-  obj->str_val = str;
-  obj->str_len = len;
+  obj->exclusive.str_val = (char *)shirp_malloc(len + 1);
+  memcpy(obj->exclusive.str_val, str, len);
+  obj->exclusive.str_val[len] = '\0';
   return obj;
 }
 
 double get_float_val(Obj *obj) {
   if (obj->typ == INT_TY)
-    return (double)obj->num_val.int_val;
-  return obj->num_val.float_val;
+    return (double)obj->exclusive.int_val;
+  return obj->exclusive.float_val;
 }
 
 void Obj_add_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = INT_TY;
-    dst->num_val.int_val = op1->num_val.int_val + op2->num_val.int_val;
+    dst->exclusive.int_val = op1->exclusive.int_val + op2->exclusive.int_val;
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    dst->num_val.float_val = op1_val + op2_val;
+    dst->exclusive.float_val = op1_val + op2_val;
   }
 }
 
 void Obj_sub_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = INT_TY;
-    dst->num_val.int_val = op1->num_val.int_val - op2->num_val.int_val;
+    dst->exclusive.int_val = op1->exclusive.int_val - op2->exclusive.int_val;
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    dst->num_val.float_val = op1_val - op2_val;
+    dst->exclusive.float_val = op1_val - op2_val;
   }
 }
 
 void Obj_mul_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = INT_TY;
-    dst->num_val.int_val = op1->num_val.int_val * op2->num_val.int_val;
+    dst->exclusive.int_val = op1->exclusive.int_val * op2->exclusive.int_val;
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    dst->num_val.float_val = op1_val * op2_val;
+    dst->exclusive.float_val = op1_val * op2_val;
   }
 }
 
 void Obj_div_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = INT_TY;
-    dst->num_val.int_val = op1->num_val.int_val / op2->num_val.int_val;
+    dst->exclusive.int_val = op1->exclusive.int_val / op2->exclusive.int_val;
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    dst->num_val.float_val = op1_val / op2_val;
+    dst->exclusive.float_val = op1_val / op2_val;
   }
 }
 
 void Obj_mod_operation(Obj *dst, Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
     dst->typ = INT_TY;
-    dst->num_val.int_val = op1->num_val.int_val % op2->num_val.int_val;
+    dst->exclusive.int_val = op1->exclusive.int_val % op2->exclusive.int_val;
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
     dst->typ = FLOAT_TY;
-    dst->num_val.float_val = fmod(op1_val, op2_val);
+    dst->exclusive.float_val = fmod(op1_val, op2_val);
   }
 }
 
 Obj *Obj_lt_operation(Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
-    return bool_obj(op1->num_val.int_val < op2->num_val.int_val);
+    return bool_obj(op1->exclusive.int_val < op2->exclusive.int_val);
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
@@ -197,7 +198,7 @@ Obj *Obj_lt_operation(Obj *op1, Obj *op2) {
 
 Obj *Obj_le_operation(Obj *op1, Obj *op2) {
   if (op1->typ == INT_TY && op2->typ == INT_TY) {
-    return bool_obj(op1->num_val.int_val <= op2->num_val.int_val);
+    return bool_obj(op1->exclusive.int_val <= op2->exclusive.int_val);
   } else {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op2);
@@ -206,17 +207,15 @@ Obj *Obj_le_operation(Obj *op1, Obj *op2) {
 }
 
 Obj *string_equal_obj(Obj *op1, Obj *op2) {
-  if (op1->str_len != op2->str_len)
-    return false_obj;
-  return bool_obj(strncmp(op1->str_val, op2->str_val, op1->str_len) == 0);
+  return bool_obj(strcmp(op1->exclusive.str_val, op2->exclusive.str_val) == 0);
 }
 
 Obj *and_obj(Obj *op1, Obj *op2) {
-  return bool_obj(op1->num_val.int_val && op2->num_val.int_val);
+  return bool_obj(op1->exclusive.int_val && op2->exclusive.int_val);
 }
 
 Obj *or_obj(Obj *op1, Obj *op2) {
-  return bool_obj(op1->num_val.int_val || op2->num_val.int_val);
+  return bool_obj(op1->exclusive.int_val || op2->exclusive.int_val);
 }
 
 // = and eq?
@@ -225,7 +224,7 @@ Obj *eq_obj(Obj *op1, Obj *op2) {
     return bool_obj(true);
 
   if (op1->typ == INT_TY && op2->typ == INT_TY)
-    return bool_obj(op1->num_val.int_val == op2->num_val.int_val);
+    return bool_obj(op1->exclusive.int_val == op2->exclusive.int_val);
   if (is_number(op1) && is_number(op2)) {
     double op1_val = get_float_val(op1);
     double op2_val = get_float_val(op1);
@@ -252,7 +251,7 @@ Obj *equal_obj(Obj *op1, Obj *op2) {
     return false_obj;
 
   if (op1->typ == CONS_TY)
-    return and_obj(equal_obj(op1->car, op2->car),
+    return and_obj(equal_obj(op1->exclusive.car, op2->exclusive.car),
                    equal_obj(op1->cdr, op2->cdr));
   return false_obj;
 }
@@ -297,9 +296,9 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
 
     /* copied because the pointer of the saved environment needs to point other
      * frames, especially in recursive calls */
-    exec_env =
-        copied_environment(proc->saved_env); // retrieve the saved environment
-    exec_env = push_frame(exec_env, env);    // push frame on the stack
+    exec_env = copied_environment(
+        proc->exclusive.saved_env);       // retrieve the saved environment
+    exec_env = push_frame(exec_env, env); // push frame on the stack
   }
 
   ASTNode *proc_arg = proc->lambda_ast->args;
@@ -352,7 +351,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     Obj *op1 = eval_ast(args);
     Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
-    res->car = op1;
+    res->exclusive.car = op1;
     res->cdr = op2;
     return res;
   } else if (match_name(name, "null?")) {
@@ -471,7 +470,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     ASTNode *arg = args;
     while (arg) {
       Obj *cell = new_obj(CONS_TY);
-      cell->car = eval_ast(arg);
+      cell->exclusive.car = eval_ast(arg);
       cell->cdr = nillist;
       RETURN_IF_ERROR()
       if (head == nillist) {
@@ -498,7 +497,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
       eval_error = true;
       return NULL;
     }
-    return cell->car;
+    return cell->exclusive.car;
   } else if (match_name(name, "cdr")) {
     debug_log("cdr evaled!");
     size_t argc = get_argc(args);
@@ -584,7 +583,8 @@ Obj *handle_proc_call(ASTNode *node) {
   Obj *caller = eval_ast(node->caller);
   RETURN_IF_ERROR()
   if (caller->typ == BUILTIN_TY)
-    return handle_builtin(node->caller->tok, caller->str_val, node->args);
+    return handle_builtin(node->caller->tok, caller->exclusive.str_val,
+                          node->args);
 
   if (node->is_tail_call)
     return call_user_procedure(node->tok, caller, node->args, true);
@@ -593,7 +593,7 @@ Obj *handle_proc_call(ASTNode *node) {
 }
 
 static bool is_not_false(Obj *obj) {
-  return !(obj->typ == BOOL_TY && obj->num_val.bool_val == false);
+  return !(obj->typ == BOOL_TY && obj->exclusive.bool_val == false);
 }
 
 Obj *eval_if(ASTNode *node) {
@@ -616,7 +616,7 @@ Obj *eval_quote(ASTNode *node) {
   ASTNode *arg = node->args;
   while (arg) {
     Obj *cell = new_obj(CONS_TY);
-    cell->car = eval_ast(arg);
+    cell->exclusive.car = eval_ast(arg);
     cell->cdr = nillist;
     RETURN_IF_ERROR()
     if (head == nillist) {
@@ -642,15 +642,17 @@ Obj *handle_lambda(ASTNode *node) {
   debug_log("lambda evaled!");
   Obj *obj = new_obj(LAMBDA_TY);
   obj->lambda_ast = node;
-  obj->saved_env = copied_environment(env);
+  obj->exclusive.saved_env = copied_environment(env);
   return obj;
 }
 
 Obj *eval_symbol(ASTNode *node) {
   debug_log("symbol evaled!");
   Obj *obj = new_obj(SYMBOL_TY);
-  obj->str_val = node->tok->loc;
-  obj->str_len = node->tok->len;
+  size_t len = node->tok->len;
+  obj->exclusive.str_val = (char *)shirp_malloc(len + 1);
+  memcpy(obj->exclusive.str_val, node->tok->loc, len);
+  obj->exclusive.str_val[len] = '\0';
   return obj;
 }
 
@@ -660,11 +662,11 @@ Obj *eval_immediate(Token *tok) {
   switch (tok->typ) {
   case INT_TY:
     obj = new_obj(INT_TY);
-    obj->num_val.int_val = tok->val.int_val;
+    obj->exclusive.int_val = tok->val.int_val;
     return obj;
   case FLOAT_TY:;
     obj = new_obj(FLOAT_TY);
-    obj->num_val.float_val = tok->val.float_val;
+    obj->exclusive.float_val = tok->val.float_val;
     return obj;
   case BOOL_TY:
     return bool_obj(tok->val.bool_val);

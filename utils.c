@@ -127,7 +127,7 @@ void dump_hashtable(HashTable *ht) {
 #endif
   for (size_t i = 0; i < ht->capacity; i++) {
     Entry *entry = ht->buckets[i];
-    if (entry && entry != TOMBSTONE) {
+    if (entry && entry != TOMBSTONE && ((Obj *)entry->val)->typ != BUILTIN_TY) {
       fprintf(stderr, "`%.*s`: ", (int)entry->keylen, entry->key);
       println_obj(entry->val);
     }
@@ -166,7 +166,9 @@ void free_ast(ASTNode *ast) {
 void free_obj(Obj *obj) {
   if (!obj)
     return;
-  if (obj->saved_env)
-    pop_frame(obj->saved_env);
+  if (obj->typ == LAMBDA_TY)
+    pop_frame(obj->exclusive.saved_env);
+  else if (obj->typ == STRING_TY || obj->typ == SYMBOL_TY)
+    free(obj->exclusive.str_val);
   free(obj);
 }

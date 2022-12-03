@@ -63,12 +63,10 @@ int main() {
   test_float("((deriv square 0.0001) 3)", 6.000100000012054);
   eval_and_print("(define (sqrt3 x) (newton-iter2 (sqrt-base x) 1.0))");
   test_float("(sqrt3 2)", 1.4142135624530596);
-  GC_mark_and_sweep();
 
   println("S8");
   eval_and_print("(define (compose f g) (lambda (x) (g (f x))))");
   test_int("((compose (lambda (x) (+ x 1)) (lambda (x) (* x x))) 2)", 9);
-  GC_mark_and_sweep();
 
   println("S9");
   eval_and_print("(define (f1 lst) (car (car (cdr (cdr lst)))))");

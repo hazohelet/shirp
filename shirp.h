@@ -69,21 +69,19 @@ bool match_anyof_tok(Token *tok, char *keywords[]);
 
 struct Obj {
   ObjType typ; // value type of object
-  /* Number Value */
+  /* Exclusive Values: single-hot for each type
+  For memory efficiency, use union value */
   union {
-    bool bool_val;
-    int64_t int_val;
-    double float_val;
-  } num_val;
-  /* String or Symbol Value */
-  char *str_val;
-  size_t str_len;
-  /* Lambda attributes */
-  Frame *saved_env;
-  ASTNode *lambda_ast;
-  /* List attributes */
-  Obj *car;
-  Obj *cdr;
+    bool bool_val;    // bool value
+    int64_t int_val;  // integer value: 64bits
+    double float_val; // floating value: 64bits
+    char *str_val;    // copied, so it has end of '\0'
+    Frame *saved_env; // lambda saved environment
+    Obj *car;         // cons cell car pointer
+  } exclusive;
+
+  ASTNode *lambda_ast; // lambda body
+  Obj *cdr;            // cons cell cdr pointer
 };
 Obj *new_obj(ObjType typ);
 

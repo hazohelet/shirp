@@ -56,8 +56,7 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
 
 Obj *new_builtin(char *name) {
   Obj *obj = new_obj(BUILTIN_TY);
-  obj->str_val = name;
-  obj->str_len = strlen(name);
+  obj->exclusive.str_val = name;
   return obj;
 }
 
