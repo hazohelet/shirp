@@ -1,6 +1,6 @@
 #include "shirp.h"
 
-#define INITIAL_BUCKET_SIZE 16
+#define INITIAL_BUCKET_SIZE 48
 #define TOMBSTONE ((void *)-1)
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261UL

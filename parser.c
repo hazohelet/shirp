@@ -453,14 +453,22 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
     return;
   case ND_PROCCALL:
     node->is_tail_call = is_in_tail_context;
-    if (is_in_tail_context) {
+    if (is_in_tail_context)
       debug_log("tail call detected: %.*s", node->tok->len, node->tok->loc);
-    }
+
     mark_tail_calls(node->caller, false);
     ASTNode *arg = node->args;
-    while (arg) {
+    while (arg && arg->next) {
       mark_tail_calls(arg, false);
       arg = arg->next;
+    }
+    /* <(and <expression>* <tail-expresion>)>
+       <(or  <expression>* <tail-expresion>)> */
+    if (arg) {
+      if (match_tok(arg->tok, "and") || match_tok(arg->tok, "or"))
+        mark_tail_calls(arg, is_in_tail_context);
+      else
+        mark_tail_calls(arg, false);
     }
     return;
   case ND_QUOTE:;

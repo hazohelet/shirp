@@ -2,6 +2,7 @@
 
 extern Frame *env;
 bool eval_error = false;
+bool side_effect = false;
 
 /* Some of the common values are pre-defined for memory efficiency */
 Obj *true_obj = &(Obj){BOOL_TY, {true}, NULL, NULL};
@@ -663,6 +664,7 @@ Obj *handle_lambda(ASTNode *node, Obj *placeholder) {
 
 Obj *handle_definition(ASTNode *node) {
   debug_log("definition handled!");
+  side_effect = true;
   Obj *value;
   if (node->args->kind == ND_LAMBDA) {
     /* make a placeholder for lambda so that that the evaluated lambda saved_env
@@ -727,11 +729,17 @@ Obj *eval_sequence(ASTNode *node) {
 
 Obj *handle_set(ASTNode *node) {
   debug_log("set! handled!");
+  side_effect = true;
   Obj *obj = eval_ast(node->caller);
   RETURN_IF_ERROR()
   Obj *new_val = eval_ast(node->args);
   RETURN_IF_ERROR()
   memcpy(obj, new_val, sizeof(Obj));
+  if (obj->typ == LAMBDA_TY) {
+    obj->exclusive.saved_env = push_new_frame(NULL);
+    copy_frame(obj->exclusive.saved_env, obj->exclusive.saved_env);
+  }
+
   return obj;
 }
 

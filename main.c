@@ -6,6 +6,7 @@ extern Token *cur;
 extern bool lexical_error;
 extern bool syntax_error;
 extern bool eval_error;
+extern bool side_effect;
 extern Obj *builtin;
 Frame *env;
 
@@ -112,6 +113,7 @@ int main() {
     lexical_error = false;
     syntax_error = false;
     eval_error = false;
+    side_effect = false;
     Token head = {};
     tokenize(line, &head);
     dump_tokens(head.next);
@@ -126,7 +128,6 @@ int main() {
     }
     /* tokenization finished */
     cur = head.next;
-    bool has_side_effect = false;
     ASTNode *ast = program();
     if (syntax_error) {
       free(line);
@@ -141,8 +142,6 @@ int main() {
     debug_log("/* Parsing finished */\n");
     mark_tail_calls(ast, false);
     debug_log("/* Tail calls are marked */\n");
-    if (ast->kind == ND_DEFINE)
-      has_side_effect = true;
     Obj *res = eval_ast(ast);
     if (eval_error) {
       free(line);
@@ -156,11 +155,12 @@ int main() {
       println_obj(res);
     else
       debug_log("nil");
-    if (!has_side_effect) {
+    if (!side_effect) {
       free(line);
       free_tokens(head.next);
       free_ast(ast);
     }
+
     debug_log("gc");
     GC_collect();
   } while (1);

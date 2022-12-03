@@ -33,6 +33,7 @@ int main() {
                  "(op (car l) init) (cdr l))))");
   eval_and_print("(define (my-reverse lst) (my-fold cons '() lst))");
   test_list_int("(my-reverse '(1 2 3))", (int64_t[]){3, 2, 1}, 3);
+  GC_collect();
 
   println("S14");
   eval_and_print("(define (complex a b) (cons a b))");
