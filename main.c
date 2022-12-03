@@ -126,7 +126,6 @@ int main() {
     }
     /* tokenization finished */
     cur = head.next;
-    dump_tokens(cur);
     bool has_side_effect = false;
     ASTNode *ast = program();
     if (syntax_error) {
@@ -163,7 +162,7 @@ int main() {
       free_ast(ast);
     }
     debug_log("gc");
-    GC_mark_and_sweep();
+    GC_collect();
   } while (1);
 
   return 0;

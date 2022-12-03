@@ -19,7 +19,7 @@ int main() {
   test_int("(car (cdr con))", 53);
   test_int("(car (cdr (cdr con)))", 64);
   test_int("(cdr (cdr (cdr con)))", 18);
-  GC_mark_and_sweep();
+  GC_collect();
 
   test_finalize();
   return 0;

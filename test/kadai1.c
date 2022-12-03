@@ -45,7 +45,7 @@ int main() {
       "(define (fib-tail a b n) (if (= n 0) a (fib-tail b (+ a b ) (- n 1))))");
   eval_and_print("(define (fib2 n) (fib-tail 0 1 n))");
   test_int("(fib2 44)", 701408733);
-  GC_mark_and_sweep();
+  GC_collect();
 
   println("S7");
   eval_and_print("(define (abs n) (if (< n 0) (- 0 n) n))");

@@ -90,7 +90,7 @@ void println_obj(Obj *obj) {
 Obj *new_obj(ObjType typ) {
   Obj *obj = (Obj *)shirp_calloc(1, sizeof(Obj));
   obj->typ = typ;
-  GC_collect(obj);
+  GC_register(obj);
   return obj;
 }
 

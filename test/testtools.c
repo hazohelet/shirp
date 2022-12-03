@@ -66,7 +66,7 @@ void test_int(char *str, int64_t expected) {
             "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%" PRId64
             "`, not = `%" PRId64 "`\n",
             str, val->exclusive.int_val, expected);
-  // GC_mark_and_sweep();
+  // GC_collect();
 }
 
 void test_float(char *str, double expected) {
@@ -80,7 +80,7 @@ void test_float(char *str, double expected) {
         stderr,
         "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` evaluates to `%lf`, not = `%lf`\n",
         str, val->exclusive.float_val, expected);
-  // GC_mark_and_sweep();
+  // GC_collect();
 }
 
 void test_list_int(char *str, int64_t expected[], size_t size) {
@@ -126,7 +126,7 @@ void test_list_int(char *str, int64_t expected[], size_t size) {
       fprintf(stderr, " ");
   }
   fprintf(stderr, ")\n");
-  // GC_mark_and_sweep();
+  // GC_collect();
 }
 
 bool assert_bool(Obj *tested, bool expected) {
@@ -150,7 +150,7 @@ void test_bool(char *str, bool expected) {
   else
     fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
             expected ? "#t" : "#f");
-  // GC_mark_and_sweep();
+  // GC_collect();
 }
 
 bool assert_symbol(Obj *tested, char *expected) {
@@ -174,7 +174,7 @@ void test_symbol(char *str, char *expected) {
   else
     fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
             expected);
-  // GC_mark_and_sweep();
+  // GC_collect();
 }
 
 bool assert_string(Obj *tested, char *expected) {
@@ -198,7 +198,7 @@ void test_string(char *str, char *expected) {
   else
     fprintf(stderr, "\x1b[1m\x1b[31mFAILED\x1b[0m: `%s` != `%s`\n", str,
             expected);
-  // GC_mark_and_sweep();
+  // GC_collect();
 }
 
 void test_finalize() {
@@ -212,5 +212,5 @@ void test_finalize() {
 void eval_and_print(char *str) {
   fprintf(stderr, "\x1b[33mRUNNING\x1b[0m: `%s`\n", str);
   eval_str(str);
-  // GC_mark_and_sweep();
+  // GC_collect();
 }

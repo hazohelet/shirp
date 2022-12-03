@@ -201,8 +201,8 @@ struct GC {
 };
 
 void GC_init();
-void GC_collect(Obj *obj);
-void GC_mark_and_sweep();
+void GC_register(Obj *obj);
+void GC_collect();
 void GC_dump();
 void hashtable_insert_ptr(HashTable *ht, void *ptr, void *val);
 void *hashtable_get_ptr(HashTable *ht, void *ptr);

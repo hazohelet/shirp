@@ -12,7 +12,7 @@ void GC_init() {
   gc->marked_table = new_hash_table(INITIAL_TABLE_SIZE);
 }
 
-void GC_collect(Obj *obj) {
+void GC_register(Obj *obj) {
   WorkList *wl = (WorkList *)shirp_calloc(1, sizeof(WorkList));
   wl->obj = obj;
   if (gc->head)
@@ -124,7 +124,7 @@ void GC_sweep() {
   }
 }
 
-void GC_mark_and_sweep() {
+void GC_collect() {
   debug_log("GC: mark");
   GC_mark();
   debug_log("GC: sweep");
