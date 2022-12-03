@@ -802,7 +802,15 @@ Obj *eval_ast(ASTNode *node) {
     return handle_set(node);
   case ND_DEFINE:
     return handle_definition(node);
-    break;
+  case ND_TOPLEVEL:;
+    ASTNode *arg = node->args;
+    Obj *res = NULL;
+    while (arg) {
+      res = eval_ast(arg);
+      RETURN_IF_ERROR()
+      arg = arg->next;
+    }
+    return res;
   }
   return NULL;
 }

@@ -98,6 +98,7 @@ typedef enum {
   ND_SET,
   ND_DEFINE,
   ND_PROCCALL,
+  ND_TOPLEVEL,
 } NodeKind;
 
 struct ASTNode {

@@ -106,7 +106,14 @@ ASTNode *identifier();
 ASTNode *number();
 ASTNode *string();
 
-ASTNode *program() { return command_or_definition(); }
+ASTNode *program() {
+  ASTNode *node = new_ast_node(ND_TOPLEVEL, NULL);
+  ASTNode *arg = command_or_definition();
+  node->args = arg;
+  while (cur)
+    arg = arg->next = command_or_definition();
+  return node;
+}
 
 static bool is_definition_start() {
   Token *peek = cur->next;
@@ -441,7 +448,15 @@ ASTNode *simple_datum() {
 void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
   if (!node)
     return;
+  ASTNode *arg;
   switch (node->kind) {
+  case ND_TOPLEVEL:;
+    arg = node->args;
+    while (arg) {
+      mark_tail_calls(arg, false);
+      arg = arg->next;
+    }
+    return;
   case ND_LAMBDA:;
     ASTNode *body = node->caller;
     while (body && body->next) {
@@ -457,7 +472,7 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
       debug_log("tail call detected: %.*s", node->tok->len, node->tok->loc);
 
     mark_tail_calls(node->caller, false);
-    ASTNode *arg = node->args;
+    arg = node->args;
     while (arg && arg->next) {
       mark_tail_calls(arg, false);
       arg = arg->next;
@@ -472,10 +487,10 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
     }
     return;
   case ND_QUOTE:;
-    ASTNode *item = node->args;
-    while (item) {
-      mark_tail_calls(item, false);
-      item = item->next;
+    arg = node->args;
+    while (arg) {
+      mark_tail_calls(arg, false);
+      arg = arg->next;
     }
     return;
   case ND_IF:;
