@@ -208,3 +208,10 @@ As is defined in the R7RS-small documentation, Shirp supports the following tail
 ```
 
 Tail context search is implemented as a depth-first search in the AST(Abstract Syntax Tree).
+
+## Garbage Collection
+
+A very simple mark-and-sweep garbage collector is implemented in Shirp.
+Currently, it collects objects every time the interpreter finishes evaluating user REPL input.
+Thus, when the user gives many inputs to the REPL, Shirp takes a long time to respond to every user input.
+There is much room for improvement.
