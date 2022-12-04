@@ -144,11 +144,13 @@ Obj *evaluate_string(char *str) {
   return res;
 }
 
-void load_file(char *filename) {
+/* if load successful, return true. if fail: false */
+bool load_file(char *filename) {
   char *buffer = read_file(filename);
   if (!buffer)
-    return;
+    return false;
   evaluate_string(buffer);
+  return lexical_error || syntax_error || eval_error ? false : true;
 }
 
 void shirp_init() {

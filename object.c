@@ -617,9 +617,9 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     Obj *filename_obj = eval_ast(args);
     RETURN_IF_ERROR()
     REQUIRE_OBJ_TYPE(args->tok, filename_obj, STRING_TY)
-    load_file(filename_obj->exclusive.str_val);
+    bool success = load_file(filename_obj->exclusive.str_val);
     RETURN_IF_ERROR()
-    return true_obj;
+    return success ? true_obj : NULL;
   }
 
   tok_error_at(tok, "unknown builtin function: %s", name);

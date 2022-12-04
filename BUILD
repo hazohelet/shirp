@@ -6,6 +6,9 @@ filegroup(
             "*.h",
         ],
     ),
+    data = [
+        "prelude.scm",
+    ],
     visibility = ["//test:__pkg__"],
 )
 
@@ -16,10 +19,14 @@ cc_binary(
         "*.h",
     ]),
     copts = [
+        "--undefine-macro DEBUG",
         "-Wall",
         "-Wextra",
         "-Wconversion",
         "-Werror",
+    ],
+    data = [
+        "prelude.scm",
     ],
 )
 
@@ -34,6 +41,9 @@ cc_binary(
         "-Wextra",
         "-Wconversion",
         "-Werror",
+    ],
+    data = [
+        "prelude.scm",
     ],
     defines = ["DEBUG"],
 )

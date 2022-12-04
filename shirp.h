@@ -211,6 +211,6 @@ void *hashtable_get_ptr(HashTable *ht, void *ptr);
 void hashtable_delete_ptr(HashTable *ht, void *ptr);
 
 void shirp_init();
-void load_file(char *filename);
+bool load_file(char *filename);
 
 #endif
