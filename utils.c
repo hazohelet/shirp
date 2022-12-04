@@ -52,6 +52,31 @@ void verror_at(char *loc, size_t len, char *fmt, va_list ap) {
   fprintf(stderr, "\n");
 }
 
+const char *type_name(ObjType typ) {
+  switch (typ) {
+  case UNDEF_TY:
+    return "undefined";
+  case BOOL_TY:
+    return "boolean";
+  case INT_TY:
+    return "integer";
+  case FLOAT_TY:
+    return "float";
+  case CHAR_TY:
+    return "character";
+  case STRING_TY:
+    return "string";
+  case SYMBOL_TY:
+    return "symbol";
+  case LAMBDA_TY:
+  case BUILTIN_TY:
+    return "closure";
+  case CONS_TY:
+    return "pair";
+  }
+  return NULL;
+}
+
 void debug_printf(char *fmt, ...) {
 #ifndef DEBUG
   return;

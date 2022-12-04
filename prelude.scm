@@ -1,0 +1,5 @@
+(define (abs n) (if (< n 0) (- n) n))
+(define (cadr lst) (car (cdr lst)))
+(define (caar lst) (car (car lst)))
+(define (cddr lst) (cdr (cdr lst)))
+(define gcd (lambda (a b) (if (= b 0) a (gcd b (remainder a b)))))

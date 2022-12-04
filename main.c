@@ -55,6 +55,32 @@ char *shirp_readline(char *buffer, size_t *pos, size_t *bufsize,
   }
 }
 
+char *read_file(char *filename) {
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    fprintf(stderr, "shirp: cannot open file '%s'\n", filename);
+    exit(1);
+  }
+  char *buffer;
+  size_t bufsize;
+  FILE *out = open_memstream(&buffer, &bufsize);
+
+  // copy the whole content
+  for (;;) {
+    char buf[4096];
+    size_t read_bytes = fread(buf, 1, sizeof(buf), fp);
+    if (read_bytes == 0)
+      break;
+    fwrite(buf, 1, read_bytes, out);
+  }
+  fclose(fp);
+
+  fflush(out);
+  fputc('\0', out);
+  fclose(out);
+  return buffer;
+}
+
 Obj *new_builtin(char *name) {
   Obj *obj = new_obj(BUILTIN_TY);
   obj->exclusive.str_val = name;
@@ -64,6 +90,65 @@ Obj *new_builtin(char *name) {
 void register_builtin(char *name) {
   Obj *obj = new_builtin(name);
   frame_insert_obj(env, name, strlen(name), obj);
+}
+
+Obj *evaluate_string(char *str) {
+  lexical_error = false;
+  syntax_error = false;
+  eval_error = false;
+  side_effect = false;
+  Token head = {};
+  tokenize(str, &head);
+  dump_tokens(head.next);
+  if (lexical_error) {
+    free(str);
+    free_tokens(head.next);
+    return NULL;
+  }
+  if (!head.next || lexical_error) {
+    free(str);
+    return NULL;
+  }
+  /* tokenization finished */
+  cur = head.next;
+  ASTNode *ast = program();
+  if (syntax_error) {
+    free(str);
+    free_tokens(head.next);
+    free_ast(ast);
+    return NULL;
+  }
+
+  if (cur) {
+    tok_error_at(cur, "fatal: still tokens left");
+    return NULL;
+  }
+  debug_log("/* Parsing finished */\n");
+  mark_tail_calls(ast, false);
+  debug_log("/* Tail calls are marked */\n");
+  Obj *res = eval_ast(ast);
+  if (eval_error) {
+    free(str);
+    free_tokens(head.next);
+    free_ast(ast);
+    free_obj(res);
+    return NULL;
+  }
+  dump_env(env);
+
+  if (!side_effect) {
+    free(str);
+    free_tokens(head.next);
+    free_ast(ast);
+  }
+  return res;
+}
+
+void load_file(char *filename) {
+  char *buffer = read_file(filename);
+  if (!buffer)
+    return;
+  evaluate_string(buffer);
 }
 
 void shirp_init() {
@@ -92,11 +177,21 @@ void shirp_init() {
   register_builtin("eq?");
   register_builtin("equal?");
   register_builtin("sqrt");
+  register_builtin("load");
+  load_file("prelude.scm");
 }
 
 #ifndef TEST
-int main() {
+int main(int argc, char **argv) {
   shirp_init();
+  if (argc >= 2) {
+    char *filename = argv[1];
+    char *buffer = read_file(filename);
+    if (buffer)
+      evaluate_string(buffer);
+    else
+      printf("error\n");
+  }
   do {
     fprintf(stderr, ">> ");
 
@@ -110,58 +205,9 @@ int main() {
       line = shirp_readline(line, &pos, &bufsize, &brackets_left);
     } while (brackets_left > 0);
 
-    lexical_error = false;
-    syntax_error = false;
-    eval_error = false;
-    side_effect = false;
-    Token head = {};
-    tokenize(line, &head);
-    dump_tokens(head.next);
-    if (lexical_error) {
-      free(line);
-      free_tokens(head.next);
-      continue;
-    }
-    if (!head.next || lexical_error) {
-      free(line);
-      continue;
-    }
-    /* tokenization finished */
-    cur = head.next;
-    ASTNode *ast = program();
-    if (syntax_error) {
-      free(line);
-      free_tokens(head.next);
-      free_ast(ast);
-      continue;
-    }
-    if (cur) {
-      tok_error_at(cur, "fatal: still tokens left");
-      continue;
-    }
-    debug_log("/* Parsing finished */\n");
-    mark_tail_calls(ast, false);
-    debug_log("/* Tail calls are marked */\n");
-    Obj *res = eval_ast(ast);
-    if (eval_error) {
-      free(line);
-      free_tokens(head.next);
-      free_ast(ast);
-      free_obj(res);
-      continue;
-    }
-    dump_env(env);
+    Obj *res = evaluate_string(line);
     if (res)
       println_obj(res);
-    else
-      debug_log("nil");
-    if (!side_effect) {
-      free(line);
-      free_tokens(head.next);
-      free_ast(ast);
-    }
-
-    debug_log("gc");
     GC_collect();
   } while (1);
 

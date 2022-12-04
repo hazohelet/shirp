@@ -351,6 +351,22 @@ bool match_name(char *name, char *name2) { return strcmp(name, name2) == 0; }
     return NULL;                                                               \
   }
 
+#define REQUIRE_OBJ_NUM_TYPE(tok, obj)                                         \
+  if (!is_number(obj)) {                                                       \
+    tok_error_at(tok, "argument expected to be a number, but got `%s`",        \
+                 type_name(obj->typ));                                         \
+    eval_error = true;                                                         \
+    return NULL;                                                               \
+  }
+
+#define REQUIRE_OBJ_TYPE(tok, obj, type)                                       \
+  if (obj->typ != type) {                                                      \
+    tok_error_at(tok, "argument expected to be of type `%s`, but got `%s`",    \
+                 type_name(type), type_name(obj->typ));                        \
+    eval_error = true;                                                         \
+    return NULL;                                                               \
+  }
+
 Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
   if (match_name(name, "cons")) {
     debug_log("<BUILTIN cons> evaled!");
@@ -375,6 +391,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
       Obj_add_operation(result, result, op2);
       arg = arg->next;
     }
@@ -382,8 +399,10 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
   } else if (match_name(name, "-")) {
     debug_log("- Handled!");
     REQUIRE_ARGC_GE(tok, args, 1)
-    Obj *result = copy_value_obj(eval_ast(args));
+    Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1);
+    Obj *result = copy_value_obj(op1);
     if (get_argc(args) == 1) {
       Obj_sub_operation(result, new_int_obj(0), result);
       return result;
@@ -392,6 +411,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2);
       Obj_sub_operation(result, result, op2);
       arg = arg->next;
     }
@@ -403,6 +423,7 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     while (arg) {
       Obj *op2 = eval_ast(arg);
       RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
       Obj_mul_operation(result, result, op2);
       arg = arg->next;
     }
@@ -412,14 +433,17 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     REQUIRE_ARGC_GE(tok, args, 2)
     Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1)
     Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->next->tok, op2)
     Obj *result = Obj_lt_operation(op1, op2);
     ASTNode *arg = args->next->next;
     op1 = op2;
     while (arg) {
       op2 = eval_ast(arg);
       RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
       result = and_obj(result, Obj_lt_operation(op1, op2));
       op1 = op2;
       arg = arg->next;
@@ -430,14 +454,17 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     REQUIRE_ARGC_GE(tok, args, 2)
     Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1)
     Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->next->tok, op2)
     Obj *result = Obj_le_operation(op1, op2);
     ASTNode *arg = args->next->next;
     op1 = op2;
     while (arg) {
       op2 = eval_ast(arg);
       RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
       result = and_obj(result, Obj_le_operation(op1, op2));
       op1 = op2;
       arg = arg->next;
@@ -446,16 +473,24 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
   } else if (match_name(name, "div") || match_name(name, "/")) {
     debug_log("`div` Handled!");
     REQUIRE_ARGC_EQ(tok, args, 2)
-    Obj *result = copy_value_obj(eval_ast(args));
+    Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1)
+    Obj *result = copy_value_obj(op1);
     Obj *op2 = eval_ast(args->next);
     RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->next->tok, op2)
     Obj_div_operation(result, result, op2);
     return result;
   } else if (match_name(name, "remainder")) {
     debug_log("`remainder` Handled!");
     REQUIRE_ARGC_EQ(tok, args, 2)
-    Obj *result = copy_value_obj(eval_ast(args));
+    Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1)
+    Obj *result = copy_value_obj(op1);
     Obj *op2 = eval_ast(args->next);
+    REQUIRE_OBJ_NUM_TYPE(args->next->tok, op2)
     RETURN_IF_ERROR()
     Obj_mod_operation(result, result, op2);
     return result;
@@ -505,37 +540,17 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     return head;
   } else if (match_tok(tok, "car")) {
     debug_log("car evaled!");
-    size_t argc = get_argc(args);
-    if (argc != 1) {
-      tok_error_at(tok, "wrong number of arguments: expects 1, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
+    REQUIRE_ARGC_EQ(tok, args, 1)
     Obj *cell = eval_ast(args);
     RETURN_IF_ERROR()
-    if (cell == nillist || cell->typ != CONS_TY) {
-      tok_error_at(tok, "car: expects a cons cell");
-      eval_error = true;
-      return NULL;
-    }
+    REQUIRE_OBJ_TYPE(args->tok, cell, CONS_TY)
     return cell->exclusive.car;
   } else if (match_name(name, "cdr")) {
     debug_log("cdr evaled!");
-    size_t argc = get_argc(args);
-    if (argc != 1) {
-      tok_error_at(tok, "wrong number of arguments: expects 1, got %ld",
-                   get_argc(args));
-      eval_error = true;
-      return NULL;
-    }
+    REQUIRE_ARGC_EQ(tok, args, 1)
     Obj *cell = eval_ast(args);
     RETURN_IF_ERROR()
-    if (cell == nillist || cell->typ != CONS_TY) {
-      tok_error_at(tok, "car: expects a cons cell");
-      eval_error = true;
-      return NULL;
-    }
+    REQUIRE_OBJ_TYPE(args->tok, cell, CONS_TY)
     return cell->cdr;
   } else if (match_name(name, "and")) { // argc >= 0
     Obj *result = true_obj;
@@ -589,12 +604,22 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
   } else if (match_name(name, "sqrt")) {
     REQUIRE_ARGC_EQ(tok, args, 1)
     Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1);
     if (is_number(op1)) {
       double val = get_float_val(op1);
       return new_float_obj(sqrt(val));
     }
     tok_error_at(tok, "sqrt: expects a number");
     return NULL;
+  } else if (match_name(name, "load")) {
+    REQUIRE_ARGC_EQ(tok, args, 1)
+    Obj *filename_obj = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_TYPE(args->tok, filename_obj, STRING_TY)
+    load_file(filename_obj->exclusive.str_val);
+    RETURN_IF_ERROR()
+    return true_obj;
   }
 
   tok_error_at(tok, "unknown builtin function: %s", name);

@@ -176,6 +176,7 @@ void *shirp_calloc(size_t n, size_t size);
 void *shirp_realloc(void *ptr, size_t size);
 void verror_at(char *loc, size_t size, char *fmt, va_list ap);
 void tok_error_at(Token *tok, char *fmt, ...);
+const char *type_name(ObjType typ);
 void debug_log(char *fmt, ...);
 void debug_printf(char *fmt, ...);
 
@@ -210,5 +211,6 @@ void *hashtable_get_ptr(HashTable *ht, void *ptr);
 void hashtable_delete_ptr(HashTable *ht, void *ptr);
 
 void shirp_init();
+void load_file(char *filename);
 
 #endif

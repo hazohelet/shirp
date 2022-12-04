@@ -169,7 +169,7 @@ ASTNode *expression() {
       }
     } else if (consume_tok("if")) {
       debug_log("If statement!");
-      ASTNode *node = new_ast_node(ND_IF, cur);
+      ASTNode *node = new_ast_node(ND_IF, prev);
       ASTNode *test = expression();
       ASTNode *consequent = expression();
       ASTNode *alternate = NULL;
@@ -184,8 +184,8 @@ ASTNode *expression() {
     } else if (consume_tok("lambda")) {
       debug_log("lambda is parsed!");
       /* read formals */
+      ASTNode *node = new_ast_node(ND_LAMBDA, prev);
       EXPECT_LBR()
-      ASTNode *node = new_ast_node(ND_LAMBDA, cur);
       ASTNode *last_arg = NULL;
       debug_log("lambda formals are parsed!");
       while (consume(TOKEN_IDENT)) {

@@ -40,10 +40,10 @@ int main() {
   eval_and_print(
       "(define fact (lambda (n) (if (< n 1) 1 (* (fact (- n 1)) n))))");
   test_int("(fact 10)", 3628800);
-  eval_and_print(
-      "(define gcd (lambda (a b) (if (= b 0) a (gcd b (remainder a b)))))");
-  test_int("(gcd 9801 1287)", 99);
-  test_int("(gcd 1287 9801)", 99);
+  eval_and_print("(define my-gcd (lambda (a b) (if (= b 0) a (my-gcd b "
+                 "(remainder a b)))))");
+  test_int("(my-gcd 9801 1287)", 99);
+  test_int("(my-gcd 1287 9801)", 99);
   GC_collect();
   test_int("(cond (else 42))", 42);
   test_int("(cond (33) (else 42))", 33);
