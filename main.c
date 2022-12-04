@@ -162,7 +162,9 @@ void shirp_init() {
   register_builtin("/");
   register_builtin("=");
   register_builtin("<");
+  register_builtin(">");
   register_builtin("<=");
+  register_builtin(">=");
   register_builtin("div");
   register_builtin("remainder");
   register_builtin("car");
@@ -180,6 +182,8 @@ void shirp_init() {
   register_builtin("equal?");
   register_builtin("sqrt");
   register_builtin("load");
+  register_builtin("even?");
+  register_builtin("odd?");
   load_file("prelude.scm");
 }
 

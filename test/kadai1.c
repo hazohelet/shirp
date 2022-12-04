@@ -11,7 +11,6 @@ int main() {
   test_int("(min-of-four 3 5 4 6)", 3);
 
   println("S2");
-  eval_and_print("(define (odd? n) (if (= (remainder n 2) 1) #t #f))");
   eval_and_print(
       "(define (count-odd x saved) (if (odd? x) (+ saved 1) saved))");
   eval_and_print("(define (odds a b c d e) (count-odd e (count-odd d "
@@ -48,7 +47,6 @@ int main() {
   GC_collect();
 
   println("S7");
-  eval_and_print("(define (abs n) (if (< n 0) (- 0 n) n))");
   eval_and_print(
       "(define (deriv f dx) (lambda (x) (/ (- (f (+ x dx)) (f x)) dx)))");
   eval_and_print("(define (sqrt-base x) (lambda (t) (- (square t) x)))");

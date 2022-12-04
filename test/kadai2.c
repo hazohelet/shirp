@@ -54,7 +54,6 @@ int main() {
   test_int("(cdr (complex* (complex 4 2) (complex -9 4)))", -2);
 
   println("S15");
-  eval_and_print("(define (even? n) (= (remainder n 2) 0))");
   eval_and_print("(define (exp1 a n)"
                  "(cond ((< n 0) 0)"
                  "((= n 0) 1)"
@@ -122,12 +121,12 @@ int main() {
                  "((eq? x 'reset-count) (set! num 0))"
                  "(else (set! num (+ num 1)) (f x))))))");
   eval_and_print("(define s (make-monitored sqrt))");
-  test_float("(s 100)", 10);
+  test_int("(s 100)", 10);
   test_int("(s 'how-many-calls?)", 1);
-  test_float("(s 400)", 20);
+  test_int("(s 400)", 20);
   test_int("(s 'how-many-calls?)", 2);
   eval_and_print("(s 'reset-count)");
-  test_float("(s 900)", 30);
+  test_int("(s 900)", 30);
   test_int("(s 'how-many-calls?)", 1);
 
   test_finalize();

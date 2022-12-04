@@ -449,6 +449,27 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
       arg = arg->next;
     }
     return result;
+  } else if (match_name(name, ">")) {
+    debug_log("> Handled!");
+    REQUIRE_ARGC_GE(tok, args, 2)
+    Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1)
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->next->tok, op2)
+    Obj *result = Obj_lt_operation(op2, op1);
+    ASTNode *arg = args->next->next;
+    op1 = op2;
+    while (arg) {
+      op2 = eval_ast(arg);
+      RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
+      result = and_obj(result, Obj_lt_operation(op2, op1));
+      op1 = op2;
+      arg = arg->next;
+    }
+    return result;
   } else if (match_name(name, "<=")) {
     debug_log("<= Handled!");
     REQUIRE_ARGC_GE(tok, args, 2)
@@ -466,6 +487,27 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
       RETURN_IF_ERROR()
       REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
       result = and_obj(result, Obj_le_operation(op1, op2));
+      op1 = op2;
+      arg = arg->next;
+    }
+    return result;
+  } else if (match_name(name, ">=")) {
+    debug_log(">= Handled!");
+    REQUIRE_ARGC_GE(tok, args, 2)
+    Obj *op1 = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->tok, op1)
+    Obj *op2 = eval_ast(args->next);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_NUM_TYPE(args->next->tok, op2)
+    Obj *result = Obj_le_operation(op2, op1);
+    ASTNode *arg = args->next->next;
+    op1 = op2;
+    while (arg) {
+      op2 = eval_ast(arg);
+      RETURN_IF_ERROR()
+      REQUIRE_OBJ_NUM_TYPE(arg->tok, op2)
+      result = and_obj(result, Obj_le_operation(op2, op1));
       op1 = op2;
       arg = arg->next;
     }
@@ -606,11 +648,15 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     Obj *op1 = eval_ast(args);
     RETURN_IF_ERROR()
     REQUIRE_OBJ_NUM_TYPE(args->tok, op1);
-    if (is_number(op1)) {
-      double val = get_float_val(op1);
-      return new_float_obj(sqrt(val));
-    }
-    tok_error_at(tok, "sqrt: expects a number");
+    double val = sqrt(get_float_val(op1));
+    if (op1->typ == FLOAT_TY)
+      return new_float_obj(val);
+
+    if ((int)val == val)
+      return new_int_obj((int)val);
+    else
+      return new_float_obj(val);
+
     return NULL;
   } else if (match_name(name, "load")) {
     REQUIRE_ARGC_EQ(tok, args, 1)
@@ -620,6 +666,18 @@ Obj *handle_builtin(Token *tok, char *name, ASTNode *args) {
     bool success = load_file(filename_obj->exclusive.str_val);
     RETURN_IF_ERROR()
     return success ? true_obj : NULL;
+  } else if (match_name(name, "even?")) {
+    REQUIRE_ARGC_EQ(tok, args, 1)
+    Obj *operand = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_TYPE(args->tok, operand, INT_TY)
+    return bool_obj((operand->exclusive.int_val & 1) == 0);
+  } else if (match_name(name, "odd?")) {
+    REQUIRE_ARGC_EQ(tok, args, 1)
+    Obj *operand = eval_ast(args);
+    RETURN_IF_ERROR()
+    REQUIRE_OBJ_TYPE(args->tok, operand, INT_TY)
+    return bool_obj((operand->exclusive.int_val & 1) != 0);
   }
 
   tok_error_at(tok, "unknown builtin function: %s", name);
@@ -692,8 +750,8 @@ Obj *handle_definition(ASTNode *node) {
   side_effect = true;
   Obj *value;
   if (node->args->kind == ND_LAMBDA) {
-    /* make a placeholder for lambda so that that the evaluated lambda saved_env
-     * holds the information of itself */
+    /* make a placeholder for lambda so that that the evaluated lambda
+     * saved_env holds the information of itself */
     value = new_obj(LAMBDA_TY);
     /* register to the environment before the lambda evaluation */
     frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,

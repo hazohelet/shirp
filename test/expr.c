@@ -53,11 +53,25 @@ int main() {
   test_bool("(= 42 42 24 42 42)", false);
   test_bool("(< -12 -3 -2 0 12 44)", true);
   test_bool("(< -12 -3 8 3)", false);
+  test_bool("(> -12 -3 -2 0 12 44)", false);
+  test_bool("(> 12 8 5 3)", true);
   test_bool("(<= 42 42 42 42 42)", true);
   test_bool("(<= 42 42 43 45 45)", true);
+  test_bool("(>= 42 42 42 42 42)", true);
+  test_bool("(>= 48 48 46 45 45)", true);
   test_int("(+)", 0);
   test_int("(*)", 1);
   test_int("(- 42)", -42);
+  test_bool("(even? 2)", true);
+  test_bool("(odd? 2)", false);
+  test_bool("(even? 0)", true);
+  test_bool("(odd? 0)", false);
+  test_bool("(even? 1023)", false);
+  test_bool("(odd? 1023)", true);
+  test_bool("(even? -1023)", false);
+  test_bool("(odd? -1023)", true);
+  test_bool("(even? -42)", true);
+  test_bool("(odd? -42)", false);
 
   test_finalize();
   return 0;
