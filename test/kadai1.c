@@ -74,6 +74,8 @@ int main() {
   test_int("(f1 '(1 2 (3 4) 5))", 3);
   test_int("(f2 '((3)))", 3);
   test_int("(f3 '(1 (2 (4 (5 (6 (7 3)))))))", 3);
+
+  println("S10");
   eval_and_print("(define (sum-total lst) (if (null? lst) 0 (+ (car lst) "
                  "(sum-total (cdr lst)))))");
   test_int("(sum-total (list 1 2 3 5))", 11);

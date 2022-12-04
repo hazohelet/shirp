@@ -19,14 +19,13 @@
 #define TOMBSTONE ((void *)-1)
 
 typedef enum {
-  TOKEN_IDENT,
-  TOKEN_IMMEDIATE,
-  TOKEN_STRING,
-  TOKEN_RESERVED,
-  TOKEN_DELIMITER,
-  TOKEN_KEYWORD,
-  TOKEN_PERIOD,
-  TOKEN_QUOTE,
+  TOKEN_IDENT,     // identifier
+  TOKEN_IMMEDIATE, // immediate values for numbers
+  TOKEN_STRING,    // string literal
+  TOKEN_DELIMITER, // delimiter
+  TOKEN_KEYWORD,   // keyword
+  TOKEN_PERIOD,    // . token
+  TOKEN_QUOTE,     // ' token
 } TokenKind;
 
 typedef enum {
@@ -54,8 +53,8 @@ struct Token {
   ObjType typ;    // type of immediate
   union {
     bool bool_val;
-    int64_t int_val;
-    double float_val;
+    int64_t int_val;  // 64bit signed integer
+    double float_val; // 64bit float
   } val;
   char *loc;   // holds reference to the source string
   size_t len;  // length of the literal
@@ -86,19 +85,20 @@ struct Obj {
 Obj *new_obj(ObjType typ);
 
 typedef enum {
-  ND_IDENT,
-  ND_IMMEDIATE,
-  ND_STRING,
-  ND_QUOTE,
-  ND_SYMBOL,
-  ND_IF,
-  ND_COND,
-  ND_SEQUENCE,
-  ND_LAMBDA,
-  ND_SET,
-  ND_DEFINE,
-  ND_PROCCALL,
-  ND_TOPLEVEL,
+  ND_IDENT,     // identifier
+  ND_IMMEDIATE, // immediate for numbers
+  ND_STRING,    // string literal
+  ND_QUOTE,     // '<datum> or (quote <datum>)
+  ND_SYMBOL,    // symbol in quote
+  ND_IF,        // (if <test> <consequent> <alternative>)
+  ND_COND,      // (cond (cond-clause ...) (else <expression> ...))
+  ND_SEQUENCE,  // <expression>+
+  ND_LAMBDA,    // lambda expression
+  ND_SET,       // assignment: set! expression
+  ND_DEFINE,    // definition: (define (name <formals>) <body>) is parsed into
+                // (define name (lambda (<formals>) <body>)) in parser
+  ND_PROCCALL,  // lambda closure call; include builtin closures
+  ND_TOPLEVEL,  // holds <command or definition>+ in args
 } NodeKind;
 
 struct ASTNode {
@@ -189,17 +189,17 @@ void free_ast(ASTNode *ast);
 void free_obj(Obj *obj);
 
 /* Garbage Collector */
-
+// Linked list of objects
 struct WorkList {
   Obj *obj;
   WorkList *next;
 };
 
 struct GC {
-  WorkList *head;
-  WorkList *tail;
-  HashTable *marked_table;
-  size_t size;
+  WorkList *head;          // head of worklist
+  WorkList *tail;          // tail of worklist
+  HashTable *marked_table; // for marking
+  size_t size;             // TODO* currently unused
 };
 
 void GC_init();
