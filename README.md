@@ -209,6 +209,14 @@ As is defined in the R7RS-small documentation, Shirp supports the following tail
 
 Tail context search is implemented as a depth-first search in the AST(Abstract Syntax Tree).
 
+### Built-in procedures
+
+-   `+` `-` `*` `/` `=` `<` `>` `<=` `>=` `div` `remainder` `car` `cdr` `null?` `pair?` `list?` `symbol?` `number?` `list` `cons` `and` `or` `eq?` `equal?` `sqrt` `load` `even?` `odd?` `abs` `cadr` `caar` `cddr` `cadadr` `caaddr` `gcd` `reverse`
+
+*   `/` and `div` works differently from the Scheme standard for integers.
+
+*   `eq?` internal does not conform to the Scheme standard.
+
 ## Garbage Collection
 
 A very simple mark-and-sweep garbage collector is implemented in Shirp.
