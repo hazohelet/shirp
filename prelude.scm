@@ -2,4 +2,12 @@
 (define (cadr lst) (car (cdr lst)))
 (define (caar lst) (car (car lst)))
 (define (cddr lst) (cdr (cdr lst)))
+(define (cadadr lst) (cadr (cadr lst)))
+(define (caaddr lst) (caar (cddr lst)))
 (define gcd (lambda (a b) (if (= b 0) a (gcd b (remainder a b)))))
+(define (reverse lst)
+(define (my-fold op init l)
+  (if (null? l)
+      init
+      (my-fold op (op (car l) init) (cdr l))))
+        (my-fold cons '() lst))
