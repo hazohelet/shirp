@@ -107,11 +107,14 @@ ASTNode *number();
 ASTNode *string();
 
 ASTNode *program() {
-  ASTNode *node = new_ast_node(ND_TOPLEVEL, NULL);
   ASTNode *arg = command_or_definition();
+  RETURN_IF_ERROR()
+  ASTNode *node = new_ast_node(ND_TOPLEVEL, NULL);
   node->args = arg;
-  while (cur)
+  while (cur) {
     arg = arg->next = command_or_definition();
+    RETURN_IF_ERROR()
+  }
   return node;
 }
 
