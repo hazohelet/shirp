@@ -305,8 +305,11 @@ Obj *call_user_procedure(Token *repr_tok, Obj *proc, ASTNode *args,
   while (proc_arg) {
     /* register to the frame other than `env` because it would interfere with
        the coming argument evaluations */
+    Obj *val = eval_ast(args);
+    RETURN_IF_ERROR()
+    Obj **obj_addr = copied_obj_address(&val);
     frame_insert_obj(arg_frame, proc_arg->tok->loc, proc_arg->tok->len,
-                     eval_ast(args));
+                     obj_addr);
     RETURN_IF_ERROR()
     proc_arg = proc_arg->next;
     args = args->next;
@@ -753,17 +756,19 @@ Obj *handle_definition(ASTNode *node) {
     /* make a placeholder for lambda so that that the evaluated lambda
      * saved_env holds the information of itself */
     value = new_obj(LAMBDA_TY);
+    Obj **obj_addr = copied_obj_address(&value);
     /* register to the environment before the lambda evaluation */
     frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
-                     value);
+                     obj_addr);
     handle_lambda(node->args, value);
     RETURN_IF_ERROR()
     return NULL;
   } else {
     value = eval_ast(node->args);
     RETURN_IF_ERROR()
+    Obj **obj_addr = copied_obj_address(&value);
     frame_insert_obj(env, node->caller->tok->loc, node->caller->tok->len,
-                     value);
+                     obj_addr);
     return NULL;
   }
 }
@@ -813,17 +818,18 @@ Obj *eval_sequence(ASTNode *node) {
 Obj *handle_set(ASTNode *node) {
   debug_log("set! handled!");
   side_effect = true;
-  Obj *obj = eval_ast(node->caller);
-  RETURN_IF_ERROR()
+  Obj **obj_addr = (Obj **)frame_get_obj(env, node->caller->tok->loc,
+                                         node->caller->tok->len);
+  if (!obj_addr) {
+    tok_error_at(node->caller->tok, "undefined variable: %.*s",
+                 node->caller->tok->len, node->caller->tok->loc);
+    return NULL;
+  }
   Obj *new_val = eval_ast(node->args);
   RETURN_IF_ERROR()
-  memcpy(obj, new_val, sizeof(Obj));
-  if (obj->typ == LAMBDA_TY) {
-    obj->exclusive.saved_env = push_new_frame(NULL);
-    copy_frame(obj->exclusive.saved_env, obj->exclusive.saved_env);
-  }
+  *obj_addr = new_val;
 
-  return obj;
+  return new_val;
 }
 
 Obj *eval_cond(ASTNode *node) {
@@ -854,10 +860,10 @@ Obj *eval_ast(ASTNode *node) {
     debug_log("handle identifier `%.*s` in the following environment",
               node->tok->len, node->tok->loc);
     dump_env(env);
-    Obj *obj = frame_get_obj(env, node->tok->loc, node->tok->len);
-    if (obj)
-      return obj;
-    else {
+    Obj **obj_addr = (Obj **)frame_get_obj(env, node->tok->loc, node->tok->len);
+    if (obj_addr) {
+      return *obj_addr;
+    } else {
       eval_error = true;
       tok_error_at(node->tok, "undefined variable: %.*s", node->tok->len,
                    node->tok->loc);

@@ -80,7 +80,7 @@ void mark_frame(Frame *frame) {
   for (size_t i = 0; i < frame->table->capacity; i++) {
     Entry *entry = frame->table->buckets[i];
     if (entry && entry != TOMBSTONE) {
-      Obj *obj = (Obj *)entry->val;
+      Obj *obj = *(Obj **)entry->val;
       mark_object(obj);
       if (obj->typ == LAMBDA_TY)
         mark_frame(obj->exclusive.saved_env);

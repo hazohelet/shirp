@@ -89,7 +89,8 @@ Obj *new_builtin(char *name) {
 
 void register_builtin(char *name) {
   Obj *obj = new_builtin(name);
-  frame_insert_obj(env, name, strlen(name), obj);
+  Obj **obj_addr = copied_obj_address(&obj);
+  frame_insert_obj(env, name, strlen(name), obj_addr);
 }
 
 Obj *evaluate_string(char *str) {

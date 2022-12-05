@@ -152,9 +152,10 @@ void dump_hashtable(HashTable *ht) {
 #endif
   for (size_t i = 0; i < ht->capacity; i++) {
     Entry *entry = ht->buckets[i];
-    if (entry && entry != TOMBSTONE && ((Obj *)entry->val)->typ != BUILTIN_TY) {
+    if (entry && entry != TOMBSTONE &&
+        (*(Obj **)entry->val)->typ != BUILTIN_TY) {
       fprintf(stderr, "`%.*s`: ", (int)entry->keylen, entry->key);
-      println_obj(entry->val);
+      println_obj(*(Obj **)entry->val);
     }
   }
   fprintf(stderr, "-----------------\n");

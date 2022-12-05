@@ -135,7 +135,7 @@ void *frame_get_obj(Frame *frame, char *key, size_t keylen) {
     if (entry) {
       debug_printf("Key found! %.*s: ", keylen, key);
 #ifdef DEBUG
-      println_obj(entry->val);
+      println_obj(*(Obj **)entry->val);
 #endif
       return entry->val;
     }
@@ -166,6 +166,12 @@ Frame *copied_environment(Frame *frame) {
   Frame *new_frame = push_new_frame(NULL);
   copy_environment_recursive(new_frame, frame);
   return new_frame;
+}
+
+Obj **copied_obj_address(Obj **obj_addr) {
+  Obj **new_obj_addr = (Obj **)shirp_malloc(sizeof(Obj *));
+  *new_obj_addr = *obj_addr;
+  return new_obj_addr;
 }
 
 /* test

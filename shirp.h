@@ -163,6 +163,7 @@ void frame_insert_obj(Frame *frame, char *key, size_t keylen, void *val);
 void *frame_get_obj(Frame *frame, char *key, size_t keylen);
 Frame *copy_frame(Frame *dst, Frame *src);
 Frame *copied_environment(Frame *frame);
+Obj **copied_obj_address(Obj **obj);
 
 /* Evaluation Trees */
 Obj *eval_ast(ASTNode *node);

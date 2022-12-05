@@ -72,6 +72,9 @@ int main() {
   test_bool("(odd? -1023)", true);
   test_bool("(even? -42)", true);
   test_bool("(odd? -42)", false);
+  eval_and_print("(define a 42) (define b a) (set! b 54)");
+  test_int("a", 42);
+  test_int("b", 54);
 
   test_finalize();
   return 0;
