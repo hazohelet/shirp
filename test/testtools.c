@@ -23,6 +23,7 @@ Obj *eval_str(char *str) {
     failure = true;
     return NULL;
   }
+  mark_tail_calls(node, false);
   Obj *val = eval_ast(node);
   if (eval_error) {
     failure = true;

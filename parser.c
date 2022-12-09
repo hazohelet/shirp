@@ -506,8 +506,10 @@ void mark_tail_calls(ASTNode *node, bool is_in_tail_context) {
     return;
   case ND_COND:;
     arg = node->args;
-    while (arg)
+    while (arg) {
       mark_tail_calls(arg, is_in_tail_context);
+      arg = arg->next;
+    }
     ASTNode *else_sequence = node->listarg;
     mark_tail_calls(else_sequence, is_in_tail_context);
     break;
